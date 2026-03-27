@@ -184,11 +184,11 @@ export default function LiveIntelFeed() {
                   <div
                     className="w-1.5 h-1.5 rounded-full"
                     style={{
-                      backgroundColor: item.relevance.score >= 8 ? '#ef4444' : item.relevance.score >= 5 ? '#f59e0b' : '#3b82f6',
-                      boxShadow: item.relevance.score >= 8 ? '0 0 6px rgba(239,68,68,0.5)' : 'none',
+                      backgroundColor: (item.relevance?.score ?? 0) >= 8 ? '#ef4444' : (item.relevance?.score ?? 0) >= 5 ? '#f59e0b' : '#3b82f6',
+                      boxShadow: (item.relevance?.score ?? 0) >= 8 ? '0 0 6px rgba(239,68,68,0.5)' : 'none',
                     }}
                   />
-                  <span className="font-mono text-[10px] text-slate-600">{item.relevance.score}</span>
+                  <span className="font-mono text-[10px] text-slate-600">{item.relevance?.score ?? ''}</span>
                 </div>
 
                 {/* Content */}
@@ -198,7 +198,7 @@ export default function LiveIntelFeed() {
                     <span className="font-mono text-[11px] text-slate-600">•</span>
                     <span className="font-mono text-[11px] text-slate-600">{timeAgo(item.pubDate)}</span>
                     {/* Operation tags */}
-                    {item.relevance.operations.map(op => {
+                    {(item.relevance?.operations || []).map(op => {
                       const opInfo = OP_LABELS[op];
                       if (!opInfo) return null;
                       return (
@@ -238,9 +238,9 @@ export default function LiveIntelFeed() {
                     >
                       OPEN SOURCE ↗
                     </a>
-                    {item.relevance.matchedKeywords.length > 0 && (
+                    {(item.relevance?.matchedKeywords?.length ?? 0) > 0 && (
                       <span className="font-mono text-[11px] text-slate-600">
-                        MATCHED: {item.relevance.matchedKeywords.slice(0, 5).join(', ')}
+                        MATCHED: {(item.relevance?.matchedKeywords || []).slice(0, 5).join(', ')}
                       </span>
                     )}
                   </div>
