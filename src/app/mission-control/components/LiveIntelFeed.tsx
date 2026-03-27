@@ -55,10 +55,18 @@ export default function LiveIntelFeed() {
     try {
       const VPS = process.env.NEXT_PUBLIC_VPS_ENDPOINT || 'https://ops.jr8ch.com';
       const KEY = process.env.NEXT_PUBLIC_VIGIL_API_KEY || '';
-      const res = await fetch(`${VPS}/api/intel-feed?limit=30`, { headers: { 'x-api-key': KEY } });
+      const res = await fetch(`${VPS}/api/mission/intel?limit=20`, { headers: { 'x-api-key': KEY } });
       if (!res.ok) throw new Error('Feed fetch failed');
       const data = await res.json();
-      setItems(data.items || []);
+      const reports = data.reports || data.items || [];
+      setItems(reports.filter((r: any) => !r.error).map((r: any) => ({
+        id: r.filename,
+        timestamp: r.timestamp || r.modified,
+        type: r.priority === 'CRITICAL' ? 'critical' : r.priority === 'ELEVATED' ? 'elevated' : 'intel',
+        source: r.heartbeat ? `ClarionAgent HB #${r.heartbeat}` : 'ClarionAgent',
+        content: r.findings?.length > 0 ? r.findings[0] : `Intel report: ${r.filename}`,
+        priority: r.priority || 'ROUTINE',
+      })));
       setLastFetch(data.meta?.fetchedAt || new Date().toISOString());
       setError(false);
     } catch {
