@@ -52,6 +52,23 @@ const ADMIN_TABS = [
   { id: 'comms', label: 'Agent Comms' },
 ];
 
+class ErrorBoundary extends React.Component<{ children: React.ReactNode; fallback?: string }, { hasError: boolean; error: string }> {
+  constructor(props: any) { super(props); this.state = { hasError: false, error: '' }; }
+  static getDerivedStateFromError(error: Error) { return { hasError: true, error: error.message }; }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="p-6 bg-red-500/10 border border-red-500/20 rounded-xl text-center">
+          <div className="text-sm font-bold text-red-400 mb-2">Component Error</div>
+          <div className="text-xs text-red-300 font-mono">{this.state.error}</div>
+          <button onClick={() => this.setState({ hasError: false })} className="mt-3 text-xs text-cyan-400 hover:text-cyan-300">Retry</button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 function Dashboard() {
   const { user, profile, loading, logout, isAdmin } = useAuth();
   const [tab, setTab] = useState('overview');
@@ -236,6 +253,7 @@ function Dashboard() {
         </div>
 
         <div className="p-4 md:p-6 md:px-8 relative z-10">
+          <ErrorBoundary>
           {tab === 'hypotheses' && <HypothesesTab />}
           {tab === 'oracle' && <OracleTab />}
           {tab === 'atlas' && <ConflictMapTab />}
@@ -275,6 +293,7 @@ function Dashboard() {
               </div>
             )
           )}
+          </ErrorBoundary>
         </div>
 
         <div className="text-center py-8">
