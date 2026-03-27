@@ -65,7 +65,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         try {
           const token = await firebaseUser.getIdToken();
           const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || '';
-          const url = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/default/documents/mission-control-users/${firebaseUser.uid}`;
+          const url = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/mission-control-users/${firebaseUser.uid}`;
           const resp = await fetch(url, {
             headers: { 'Authorization': `Bearer ${token}` },
           });
