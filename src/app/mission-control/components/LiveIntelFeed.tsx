@@ -53,7 +53,9 @@ export default function LiveIntelFeed() {
 
   const fetchFeed = async () => {
     try {
-      const res = await fetch('/api/intel-feed?limit=30');
+      const VPS = process.env.NEXT_PUBLIC_VPS_ENDPOINT || 'https://ops.jr8ch.com';
+      const KEY = process.env.NEXT_PUBLIC_VIGIL_API_KEY || '';
+      const res = await fetch(`${VPS}/api/intel-feed?limit=30`, { headers: { 'x-api-key': KEY } });
       if (!res.ok) throw new Error('Feed fetch failed');
       const data = await res.json();
       setItems(data.items || []);
