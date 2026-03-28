@@ -14,3 +14,4 @@ export { default as AgentCommsTab } from './AgentCommsTab';
 export { default as OracleTab } from './OracleTab';
 export { default as ConflictMapTab } from './ConflictMapTab';
 export { default as HypothesesTab } from './HypothesesTab';
+export { default as RegistersTab } from './RegistersTab';
