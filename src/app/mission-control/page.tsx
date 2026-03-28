@@ -103,7 +103,7 @@ function Dashboard() {
   }, []);
 
   const mission = liveMission || MISSION;
-  const rawOpsec = (mission.opsec as string) || MISSION.opsec;
+  const rawOpsec = (typeof mission.opsec === 'object' ? (mission.opsec as any).status : mission.opsec as string) || MISSION.opsec;
   const opsec = rawOpsec === 'UNKNOWN' ? 'GREEN' : rawOpsec; // Default to GREEN if agent hasn't reported
   const rawThreat = (mission.threat as string) || MISSION.threat;
   const threat = rawThreat === 'UNKNOWN' ? 'ORANGE' : rawThreat; // Default to ORANGE (last known)

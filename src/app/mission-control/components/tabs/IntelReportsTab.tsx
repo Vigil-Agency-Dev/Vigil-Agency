@@ -144,7 +144,7 @@ export default function IntelReportsTab() {
                     </div>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
-                    {r.opsec && <span className="font-mono text-[10px] px-2 py-0.5 rounded bg-green-500/10 text-green-500">{r.opsec}</span>}
+                    {r.opsec && <span className="font-mono text-[10px] px-2 py-0.5 rounded bg-green-500/10 text-green-500">{typeof r.opsec === 'object' ? (r.opsec as any).status : r.opsec}</span>}
                     <span className="font-mono text-[10px] px-2 py-0.5 rounded" style={{ background: `${priorityColor(r.priority)}15`, color: priorityColor(r.priority) }}>{r.priority}</span>
                     {content && <span className="text-[10px] text-cyan-500">{r.findings?.length || 0} findings</span>}
                     <span className="text-slate-500 text-xs">{isExpanded ? '\u25BE' : '\u25B8'}</span>
@@ -251,7 +251,7 @@ export default function IntelReportsTab() {
           <div className="flex gap-2.5 mb-3.5 flex-wrap">
             {[
               { l: 'Phase', v: r.phase, c: '#06b6d4' },
-              { l: 'OPSEC', v: r.opsec, c: '#10b981' },
+              { l: 'OPSEC', v: typeof r.opsec === 'object' ? (r.opsec as any).status : r.opsec, c: '#10b981' },
               { l: 'Actions', v: r.actions, c: '#8b5cf6' },
               { l: 'Comments', v: r.comments, c: '#3b82f6' },
             ].map((x, j) => (
