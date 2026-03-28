@@ -12,13 +12,15 @@ export default function AlliesTab() {
 
   useEffect(() => {
     if (!API_KEY) return;
-    async function checkVPS() {
+    async function fetchAllies() {
       try {
         const res = await fetch(`${VPS_API}/api/mission/allies`, { headers: { 'x-api-key': API_KEY } });
         if (res.ok) setIsLive(true);
       } catch { /* fall back */ }
     }
-    checkVPS();
+    fetchAllies();
+    const interval = setInterval(fetchAllies, 60000);
+    return () => clearInterval(interval);
   }, []);
 
   return (

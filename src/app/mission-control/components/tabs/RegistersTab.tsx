@@ -77,10 +77,13 @@ function ThreatsRegister() {
   const [isLive, setIsLive] = useState(false);
 
   useEffect(() => {
-    Promise.all([
+    const load = () => Promise.all([
       fetchVPS('/api/mission/threats').then(d => { setThreats(d.threats || []); setIsLive(true); }).catch(() => {}),
       fetchVPS('/api/mission/threat-register').then(d => setMeridianThreats(d.threats || [])).catch(() => {}),
     ]);
+    load();
+    const interval = setInterval(load, 120000);
+    return () => clearInterval(interval);
   }, []);
 
   const allThreats = [...threats.map(t => ({ ...t, source: 'DV' })), ...meridianThreats.map(t => ({ ...t, source: 'MERIDIAN' }))];
@@ -131,7 +134,10 @@ function AlliesRegister() {
   const [isLive, setIsLive] = useState(false);
 
   useEffect(() => {
-    fetchVPS('/api/mission/allies').then(d => { setAllies(d.allies || []); setIsLive(true); }).catch(() => {});
+    const load = () => fetchVPS('/api/mission/allies').then(d => { setAllies(d.allies || []); setIsLive(true); }).catch(() => {});
+    load();
+    const interval = setInterval(load, 120000);
+    return () => clearInterval(interval);
   }, []);
 
   return (
@@ -175,7 +181,10 @@ function HypothesesRegister() {
   const [isLive, setIsLive] = useState(false);
 
   useEffect(() => {
-    fetchVPS('/api/mission/hypotheses').then(d => { setHypotheses(d.hypotheses || []); setIsLive(true); }).catch(() => {});
+    const load = () => fetchVPS('/api/mission/hypotheses').then(d => { setHypotheses(d.hypotheses || []); setIsLive(true); }).catch(() => {});
+    load();
+    const interval = setInterval(load, 120000);
+    return () => clearInterval(interval);
   }, []);
 
   return (
@@ -237,7 +246,10 @@ function PatternsRegister() {
   const [isLive, setIsLive] = useState(false);
 
   useEffect(() => {
-    fetchVPS('/api/mission/patterns').then(d => { setPatterns(d.patterns || []); setIsLive(true); }).catch(() => {});
+    const load = () => fetchVPS('/api/mission/patterns').then(d => { setPatterns(d.patterns || []); setIsLive(true); }).catch(() => {});
+    load();
+    const interval = setInterval(load, 120000);
+    return () => clearInterval(interval);
   }, []);
 
   return (
@@ -302,7 +314,10 @@ function TrajectoriesRegister() {
   const [isLive, setIsLive] = useState(false);
 
   useEffect(() => {
-    fetchVPS('/api/mission/trajectory').then(d => { setTrajectory(d.trajectory); setFilename(d.filename || ''); setIsLive(true); }).catch(() => {});
+    const load = () => fetchVPS('/api/mission/trajectory').then(d => { setTrajectory(d.trajectory); setFilename(d.filename || ''); setIsLive(true); }).catch(() => {});
+    load();
+    const interval = setInterval(load, 120000);
+    return () => clearInterval(interval);
   }, []);
 
   if (!trajectory) return <div className="text-center py-8 text-[13px] text-slate-600">No trajectory data available.</div>;
