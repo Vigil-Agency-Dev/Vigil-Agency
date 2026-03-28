@@ -1,121 +1,72 @@
-import { getDB, toISO } from '../firestore';
+import { vpsGet } from '../vps-client';
 import type { MCPTool } from './index';
 
 export const dashboardTools: MCPTool[] = [
   {
     name: 'get_dashboard',
-    description: 'Get a comprehensive operational dashboard — mission status, all agent statuses, threat summary, recent intel, latest strategy, operational tempo. The single-call overview for mobile check-ins.',
+    description: 'Full operational dashboard — mission status, agents, threats, intel, strategy, trajectories. The single-call overview for mobile check-ins.',
     inputSchema: { type: 'object', properties: {}, required: [] },
     handler: async () => {
-      const db = getDB();
-      const [configDoc, agentsSnap, threatsSnap, intelSnap, stratSnap, reportsSnap, hypoSnap, trajSnap] = await Promise.all([
-        db.doc('config/mission').get(),
-        db.collection('agents').get(),
-        db.collection('threats').get(),
-        db.collection('intel').orderBy('timestamp', 'desc').limit(3).get(),
-        db.collection('strategies').orderBy('timestamp', 'desc').limit(1).get(),
-        db.collection('teamReports').orderBy('timestamp', 'desc').limit(3).get(),
-        db.collection('hypotheses').get(),
-        db.collection('trajectories').get(),
+      const [overview, threats, intel, strategy, hypotheses, patterns, trajectory, teamReports] = await Promise.all([
+        vpsGet('/api/mission/overview'),
+        vpsGet('/api/mission/threats'),
+        vpsGet('/api/mission/intel?limit=5'),
+        vpsGet('/api/mission/strategy?limit=3'),
+        vpsGet('/api/mission/hypotheses').catch(() => ({ hypotheses: [] })),
+        vpsGet('/api/mission/patterns').catch(() => ({ patterns: [] })),
+        vpsGet('/api/mission/trajectory').catch(() => ({ trajectory: null })),
+        vpsGet('/api/mission/team-reports').catch(() => ({ reports: [] })),
       ]);
-
-      const threats = threatsSnap.docs.map(d => d.data());
-      const critical = threats.filter((t: any) => t.severity === 'CRITICAL' || t.status === 'IMMINENT');
-
       return {
-        mission: configDoc.data() || {},
-        agents: agentsSnap.docs.map(d => ({ id: d.id, ...d.data() })),
-        threatSummary: {
-          total: threats.length,
-          critical: critical.length,
-          active: threats.filter((t: any) => t.status === 'ACTIVE').length,
-          criticalItems: critical,
-        },
-        latestIntel: intelSnap.docs.map(d => {
-          const data = d.data();
-          return { id: d.id, filename: data.filename, heartbeat: data.heartbeat, priority: data.priority, findingsCount: data.findings?.length || 0, timestamp: toISO(data.timestamp) };
-        }),
-        latestStrategy: stratSnap.empty ? null : { id: stratSnap.docs[0].id, ...stratSnap.docs[0].data(), timestamp: toISO(stratSnap.docs[0].data().timestamp) },
-        latestReports: reportsSnap.docs.map(d => {
-          const data = d.data();
-          return { id: d.id, agent: data.agent, summary: data.summary, threatLevel: data.threatLevel, timestamp: toISO(data.timestamp) };
-        }),
-        hypotheses: hypoSnap.docs.map(d => {
-          const data = d.data();
-          return { id: d.id, title: data.title, status: data.status, confidence: data.confidence };
-        }),
-        trajectories: trajSnap.docs.map(d => {
-          const data = d.data();
-          return { id: d.id, title: data.title, probability: data.probability };
-        }),
+        mission: overview.mission || {},
+        agents: overview.agents || {},
+        stats: overview.stats || {},
+        threats: threats.threats || [],
+        latestIntel: (intel.reports || []).slice(0, 3),
+        latestStrategy: (strategy.updates || [])[0] || null,
+        hypotheses: (hypotheses.hypotheses || []).map((h: any) => ({ id: h.id, title: h.title, status: h.status })),
+        patterns: (patterns.patterns || []).map((p: any) => ({ id: p.id, title: p.title, confidence: p.confidence })),
+        trajectory: trajectory.trajectory || null,
+        teamReports: (teamReports.reports || []).slice(0, 3),
         timestamp: new Date().toISOString(),
       };
     },
   },
   {
     name: 'get_operational_timeline',
-    description: 'Get a chronological timeline of all significant events across agents — heartbeats, strategies, status changes, escalations.',
+    description: 'Chronological timeline of significant events across agents.',
     inputSchema: {
       type: 'object',
-      properties: {
-        hours: { type: 'number', description: 'Look-back window in hours (default 24, max 168)' },
-        agent: { type: 'string', description: 'Filter by agent' },
-      },
+      properties: { hours: { type: 'number', description: 'Look-back hours (default 24)' } },
       required: [],
     },
-    handler: async (args) => {
-      const db = getDB();
-      const hours = Math.min(Number(args.hours) || 24, 168);
-      const since = new Date(Date.now() - hours * 3600000);
-
-      const [intelSnap, stratSnap, logSnap, reportSnap] = await Promise.all([
-        db.collection('intel').where('timestamp', '>', since).orderBy('timestamp', 'desc').limit(50).get(),
-        db.collection('strategies').where('timestamp', '>', since).orderBy('timestamp', 'desc').limit(20).get(),
-        db.collection('operationalLog').where('timestamp', '>', since).orderBy('timestamp', 'desc').limit(50).get(),
-        db.collection('teamReports').where('timestamp', '>', since).orderBy('timestamp', 'desc').limit(20).get(),
+    handler: async () => {
+      const [intel, strategy, reports] = await Promise.all([
+        vpsGet('/api/mission/intel?limit=20'),
+        vpsGet('/api/mission/strategy?limit=10'),
+        vpsGet('/api/mission/team-reports'),
       ]);
-
       const events: any[] = [];
-      intelSnap.docs.forEach(d => { const data = d.data(); events.push({ type: 'intel', agent: 'clarion', timestamp: toISO(data.timestamp), detail: `HB${data.heartbeat || '?'}: ${data.findings?.length || 0} findings` }); });
-      stratSnap.docs.forEach(d => { const data = d.data(); events.push({ type: 'strategy', agent: data.author || 'unknown', timestamp: toISO(data.timestamp), detail: `${data.classification}: ${data.summary || data.filename}` }); });
-      logSnap.docs.forEach(d => { const data = d.data(); events.push({ type: 'log', agent: data.agent, timestamp: toISO(data.timestamp), detail: `${data.action}: ${data.detail}` }); });
-      reportSnap.docs.forEach(d => { const data = d.data(); events.push({ type: 'report', agent: data.agent, timestamp: toISO(data.timestamp), detail: data.summary }); });
-
-      events.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-
-      let filtered = events;
-      if (args.agent) filtered = events.filter(e => e.agent === args.agent);
-
-      return { events: filtered, count: filtered.length, hours, timestamp: new Date().toISOString() };
+      (intel.reports || []).forEach((r: any) => events.push({ type: 'intel', timestamp: r.timestamp || r.modified, detail: `${r.filename}: ${r.findings?.length || 0} findings` }));
+      (strategy.updates || []).forEach((s: any) => events.push({ type: 'strategy', timestamp: s.timestamp, detail: s.filename }));
+      (reports.reports || []).forEach((r: any) => events.push({ type: 'report', agent: r.team, timestamp: r.status?.last_run, detail: r.status?.summary }));
+      events.sort((a, b) => new Date(b.timestamp || 0).getTime() - new Date(a.timestamp || 0).getTime());
+      return { events: events.slice(0, 50), count: events.length, timestamp: new Date().toISOString() };
     },
   },
   {
     name: 'get_cycle_status',
-    description: "Get the current operational cycle status — what's due, what's overdue, what's completed this cycle.",
+    description: "Current operational cycle — what's due, overdue, completed.",
     inputSchema: { type: 'object', properties: {}, required: [] },
     handler: async () => {
-      const db = getDB();
-      const now = new Date();
-      const todayStart = new Date(now); todayStart.setHours(0, 0, 0, 0);
-
-      const [agentsSnap, intelSnap, stratSnap, reportSnap] = await Promise.all([
-        db.collection('agents').get(),
-        db.collection('intel').where('timestamp', '>', todayStart).get(),
-        db.collection('strategies').where('timestamp', '>', todayStart).get(),
-        db.collection('teamReports').where('timestamp', '>', todayStart).get(),
+      const [overview, mcStatus] = await Promise.all([
+        vpsGet('/api/mission/overview'),
+        vpsGet('/api/mission-control/status').catch(() => ({})),
       ]);
-
-      const agents = agentsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-      const overdueAgents = agents.filter((a: any) => a.overdue);
-
       return {
-        date: now.toISOString().split('T')[0],
-        agents: agents.map((a: any) => ({ id: a.id, status: a.status, overdue: a.overdue || false, lastActivity: a.lastActivity ? toISO(a.lastActivity) : 'never' })),
-        todayIntel: intelSnap.size,
-        todayStrategies: stratSnap.size,
-        todayReports: reportSnap.size,
-        overdueAgents: overdueAgents.map((a: any) => a.id),
-        timestamp: now.toISOString(),
+        overview: { stats: overview.stats, mission: overview.mission, agents: overview.agents },
+        mcAnalyst: mcStatus,
+        timestamp: new Date().toISOString(),
       };
     },
   },
