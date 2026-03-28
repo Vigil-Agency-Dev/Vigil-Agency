@@ -84,7 +84,9 @@ function renderStrategyMarkdown(raw: string) {
   return elements;
 }
 
-export default function OrdersTab() {
+export default function OrdersTab({ realm }: { realm?: 'ai' | 'human' }) {
+  const realmLabel = realm === 'human' ? 'AXIOM Directives (Human Realm)' : 'ClarionAgent Directives (AI Realm)';
+  const realmColor = realm === 'human' ? '#f59e0b' : '#3b82f6';
   const [liveStrategies, setLiveStrategies] = useState<LiveStrategy[]>([]);
   const [isLive, setIsLive] = useState(false);
   const [expanded, setExpanded] = useState<string | null>(null);
@@ -110,7 +112,7 @@ export default function OrdersTab() {
       <div className="flex flex-col gap-4">
         <div className="flex items-center gap-2">
           <Dot color="#10b981" pulse />
-          <span className="font-mono text-xs tracking-wider text-green-500">LIVE — {liveStrategies.length} STRATEGY BRIEFINGS</span>
+          <span className="font-mono text-xs tracking-wider" style={{ color: realmColor }}>{realmLabel} — {liveStrategies.length} BRIEFINGS</span>
         </div>
 
         {liveStrategies.map((s, i) => {

@@ -36,8 +36,10 @@ const BASE_TABS = [
   { id: 'threats', label: 'Threats' },
   { id: 'scout', label: 'SCOUT Cluster' },
   { id: 'allies', label: 'Allies' },
-  { id: 'intel', label: 'Intel Reports' },
-  { id: 'orders', label: 'Orders' },
+  { id: 'sigint', label: 'SIGINT (AI Realm)' },
+  { id: 'humint', label: 'HUMINT (Human Realm)' },
+  { id: 'orders-ai', label: 'Orders (AI)' },
+  { id: 'orders-human', label: 'Orders (Human)' },
   { id: 'exchange', label: 'Intel Exchange' },
   { id: 'epstein', label: 'Epstein Intel' },
   { id: 'timeline', label: 'Timeline' },
@@ -147,7 +149,7 @@ function Dashboard() {
 
   const NAV_SECTIONS = [
     { label: 'Operations', items: allTabs.filter(t => ['overview', 'threats', 'scout', 'allies'].includes(t.id)) },
-    { label: 'Intelligence', items: allTabs.filter(t => ['intel', 'orders', 'exchange', 'epstein'].includes(t.id)) },
+    { label: 'Intelligence', items: allTabs.filter(t => ['sigint', 'humint', 'orders-ai', 'orders-human', 'exchange', 'epstein'].includes(t.id)) },
     { label: 'Analysis', items: allTabs.filter(t => ['timeline', 'cms', 'registers', 'hypotheses', 'oracle', 'atlas'].includes(t.id)) },
     { label: 'Tools', items: allTabs.filter(t => ['notebook', 'gateway', 'comms'].includes(t.id)) },
   ].filter(s => s.items.length > 0);
@@ -269,8 +271,10 @@ function Dashboard() {
                 {tab === 'threats' && <ThreatsTab />}
                 {tab === 'scout' && <ScoutTab />}
                 {tab === 'allies' && <AlliesTab />}
-                {tab === 'intel' && <IntelReportsTab />}
-                {tab === 'orders' && <OrdersTab />}
+                {tab === 'sigint' && <IntelReportsTab realm="ai" />}
+                {tab === 'humint' && <IntelReportsTab realm="human" />}
+                {tab === 'orders-ai' && <OrdersTab realm="ai" />}
+                {tab === 'orders-human' && <OrdersTab realm="human" />}
                 {tab === 'exchange' && <IntelExchangeTab />}
                 {tab === 'epstein' && <EpsteinIntelTab />}
                 {tab === 'timeline' && <TimelineTab />}

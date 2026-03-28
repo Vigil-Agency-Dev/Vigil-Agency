@@ -42,7 +42,9 @@ function hasContent(r: LiveIntelReport) {
   return (r.findings?.length > 0) || (r.questions?.length > 0) || (r.redFlags?.length > 0) || r.actionsCount > 0;
 }
 
-export default function IntelReportsTab() {
+export default function IntelReportsTab({ realm }: { realm?: 'ai' | 'human' }) {
+  const realmLabel = realm === 'human' ? 'HUMINT — Human Realm (AXIOM)' : 'SIGINT — AI Realm (ClarionAgent)';
+  const realmColor = realm === 'human' ? '#f59e0b' : '#06b6d4';
   const [liveReports, setLiveReports] = useState<LiveIntelReport[]>([]);
   const [isLive, setIsLive] = useState(false);
   const [expanded, setExpanded] = useState<string | null>(null);
@@ -54,11 +56,28 @@ export default function IntelReportsTab() {
     if (!API_KEY) return;
     async function fetchIntel() {
       try {
-        const res = await fetch(`${VPS_API}/api/mission/intel?limit=100`, { headers: { 'x-api-key': API_KEY } });
-        if (!res.ok) throw new Error(`${res.status}`);
-        const data = await res.json();
-        const reports = Array.isArray(data) ? data : data.reports || data.data || [];
-        if (reports.length > 0) { setLiveReports(reports); setIsLive(true); }
+        // Fetch from appropriate endpoint based on realm
+        const endpoints = realm === 'human'
+          ? [`${VPS_API}/api/mission/intel?limit=100&source=axiom`]
+          : [`${VPS_API}/api/mission/intel?limit=100`];
+
+        let allReports: LiveIntelReport[] = [];
+        for (const ep of endpoints) {
+          const res = await fetch(ep, { headers: { 'x-api-key': API_KEY } });
+          if (!res.ok) continue;
+          const data = await res.json();
+          const reports = Array.isArray(data) ? data : data.reports || data.data || [];
+          allReports = [...allReports, ...reports];
+        }
+
+        // Filter by realm
+        if (realm === 'human') {
+          allReports = allReports.filter(r => r.filename?.includes('axiom') || r.filename?.includes('humint'));
+        } else if (realm === 'ai') {
+          allReports = allReports.filter(r => !r.filename?.includes('axiom') && !r.filename?.includes('humint'));
+        }
+
+        if (allReports.length > 0) { setLiveReports(allReports); setIsLive(true); }
       } catch { /* static fallback */ }
     }
     fetchIntel();
@@ -82,7 +101,7 @@ export default function IntelReportsTab() {
         <div className="flex items-center justify-between flex-wrap gap-2">
           <div className="flex items-center gap-2">
             <Dot color="#10b981" pulse />
-            <span className="font-mono text-xs tracking-wider text-green-500">LIVE — {liveReports.length} INTEL REPORTS</span>
+            <span className="font-mono text-xs tracking-wider" style={{ color: realmColor }}>{realmLabel} — {liveReports.length} REPORTS</span>
             <span className="font-mono text-xs text-slate-600">({withContent} with findings)</span>
           </div>
           <div className="flex items-center gap-2">
