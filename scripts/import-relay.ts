@@ -21,7 +21,7 @@ const db = getFirestore();
 const relayPath = join(process.env.HOME || '', 'Documents/Claude/Projects/VIGIL AGENCY - CENTRAL COMMAND/centcom-relay.json');
 let relay: any;
 try {
-  relay = JSON.parse(readFileSync(relayPath, 'utf8'));
+  relay = JSON.parse(readFileSync(relayPath, 'utf8').replace(/^\uFEFF/, ''));
   console.log(`Relay loaded. Timestamp: ${relay.relayTimestamp}`);
 } catch (e: any) {
   console.error(`Failed to read relay: ${e.message}`);
