@@ -77,7 +77,8 @@ export default function IntelReportsTab({ realm }: { realm?: 'ai' | 'human' }) {
           allReports = allReports.filter(r => !r.filename?.includes('axiom') && !r.filename?.includes('humint'));
         }
 
-        if (allReports.length > 0) { setLiveReports(allReports); setIsLive(true); }
+        setLiveReports(allReports);
+        setIsLive(true);
       } catch { /* static fallback */ }
     }
     fetchIntel();
@@ -85,7 +86,22 @@ export default function IntelReportsTab({ realm }: { realm?: 'ai' | 'human' }) {
     return () => clearInterval(interval);
   }, []);
 
-  if (isLive && liveReports.length > 0) {
+  if (isLive) {
+    if (liveReports.length === 0) {
+      return (
+        <div className="flex flex-col gap-4">
+          <div className="flex items-center gap-2 px-1">
+            <Dot color={realmColor} pulse />
+            <span className="font-mono text-xs tracking-wider" style={{ color: realmColor }}>{realmLabel} — CONNECTED</span>
+          </div>
+          <div className="text-center py-12 bg-[#111b2a] border border-[#1e2d44] rounded-xl">
+            <div className="text-[14px] text-slate-500">
+              {realm === 'human' ? 'Awaiting first AXIOM intel report' : 'No intel reports in current window'}
+            </div>
+          </div>
+        </div>
+      );
+    }
     let filtered = liveReports;
     if (filterPriority) filtered = filtered.filter(r => r.priority === filterPriority);
     if (!showEmpty) filtered = filtered.filter(r => hasContent(r));
@@ -257,7 +273,27 @@ export default function IntelReportsTab({ realm }: { realm?: 'ai' | 'human' }) {
     );
   }
 
-  // Static fallback
+  // If realm-filtered and no data, show realm-specific empty state
+  if (realm) {
+    return (
+      <div className="flex flex-col gap-4">
+        <div className="flex items-center gap-2 px-1">
+          <Dot color={realmColor} />
+          <span className="font-mono text-xs tracking-wider" style={{ color: realmColor }}>{realmLabel}</span>
+        </div>
+        <div className="text-center py-12 bg-[#111b2a] border border-[#1e2d44] rounded-xl">
+          <div className="text-[14px] text-slate-500 mb-2">
+            {realm === 'human' ? 'No AXIOM intel reports yet' : 'No ClarionAgent intel reports yet'}
+          </div>
+          <div className="text-[12px] text-slate-600">
+            {realm === 'human' ? 'AXIOM will file reports as intel_from_axiom/ on the VPS dead-drop' : 'ClarionAgent files intel after each heartbeat cycle'}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Static fallback (no realm filter — legacy view)
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-center gap-2 px-1">
