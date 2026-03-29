@@ -166,15 +166,40 @@ export default function OverviewTab() {
   const liveAllies = live?.allies || [];
   const mcStatus = live?.missionControlStatus || null;
 
+  // Fetch additional live counts
+  const [liveCounts, setLiveCounts] = useState({ patterns: 0, hypotheses: 0, allies: 0, epsteinThreats: 0 });
+  useEffect(() => {
+    if (!API_KEY) return;
+    async function fetchCounts() {
+      try {
+        const [pats, hypos, allies, tReg] = await Promise.all([
+          fetch(`${VPS_API}/api/mission/patterns`, { headers: { 'x-api-key': API_KEY } }).then(r => r.ok ? r.json() : { patterns: [] }),
+          fetch(`${VPS_API}/api/mission/hypotheses`, { headers: { 'x-api-key': API_KEY } }).then(r => r.ok ? r.json() : { hypotheses: [] }),
+          fetch(`${VPS_API}/api/mission/allies`, { headers: { 'x-api-key': API_KEY } }).then(r => r.ok ? r.json() : { allies: [] }),
+          fetch(`${VPS_API}/api/mission/threat-register`, { headers: { 'x-api-key': API_KEY } }).then(r => r.ok ? r.json() : { threats: [] }),
+        ]);
+        setLiveCounts({
+          patterns: pats.patterns?.length || 0,
+          hypotheses: hypos.hypotheses?.length || 0,
+          allies: allies.allies?.length || 0,
+          epsteinThreats: tReg.threats?.length || 0,
+        });
+      } catch {}
+    }
+    fetchCounts();
+    const interval = setInterval(fetchCounts, 120000);
+    return () => clearInterval(interval);
+  }, []);
+
   const stats = [
     { l: 'Heartbeats', v: heartbeats, s: `${overdue} overdue`, c: '#3b82f6' },
-    { l: 'Comments', v: live?.stats?.commentsTotal ?? STATS.comments, s: `${live?.stats?.actionsTotal ?? STATS.verified} actions`, c: '#10b981' },
-    { l: 'Allies Tracked', v: liveAllies.length || ALLIES.length, s: `${liveAllies.length ? liveAllies.filter((a: Record<string, unknown>) => a.contacted || a.status === 'CONTACT MADE').length : ALLIES.filter(a => a.contacted).length} contacted`, c: '#8b5cf6' },
-    { l: 'Threat Actors', v: liveThreats.length || SCOUT.total, s: 'live scan', c: '#f97316' },
-    { l: 'Pattern Matches', v: PATTERN_MATCHES.length, s: 'cross-domain', c: '#06b6d4' },
-    { l: 'Shared Entities', v: SHARED_ENTITIES.length, s: 'tracked', c: '#ec4899' },
+    { l: 'Actions', v: live?.stats?.actionsTotal ?? 0, s: `${live?.stats?.commentsTotal ?? 0} comments`, c: '#10b981' },
+    { l: 'Allies Tracked', v: liveCounts.allies || liveAllies.length, s: 'across all realms', c: '#8b5cf6' },
+    { l: 'Threat Actors', v: liveThreats.length, s: `${liveCounts.epsteinThreats} MERIDIAN`, c: '#f97316' },
+    { l: 'Pattern Matches', v: liveCounts.patterns || PATTERN_MATCHES.length, s: 'cross-domain', c: '#06b6d4' },
+    { l: 'Hypotheses', v: liveCounts.hypotheses, s: 'active', c: '#8b5cf6' },
     { l: 'Hours Offline', v: offlineHrs, s: offlineHrs === 0 ? 'agent active' : 'since last HB', c: (offlineHrs as number) > 24 ? '#ef4444' : '#f59e0b' },
-    { l: 'Epstein Findings', v: EPSTEIN_INTEL.keyFindings.length, s: 'Tier 1 sourced', c: '#f59e0b' },
+    { l: 'Agents Online', v: agents ? Object.values(agents).filter((a: any) => a.status === 'ACTIVE').length : 0, s: `of ${agents ? Object.keys(agents).length : 0} total`, c: '#10b981' },
   ];
 
   return (
