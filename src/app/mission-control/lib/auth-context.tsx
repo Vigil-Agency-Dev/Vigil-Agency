@@ -6,7 +6,7 @@ import { doc, getDoc } from 'firebase/firestore';
 import { auth, db } from './firebase-config';
 
 // Role definitions
-// ADMIN: Full read/write access (Josh + Claude)
+// ADMIN: Full read/write access (DIRECTOR + Claude)
 // ANALYST: Read + download, can add notebook entries
 // OBSERVER: Read-only, can download evidence
 export type UserRole = 'admin' | 'analyst' | 'observer';

@@ -7,7 +7,9 @@ import { ALLIES } from '../../lib/mission-data';
 const VPS_API = process.env.NEXT_PUBLIC_VPS_ENDPOINT || 'https://ops.jr8ch.com';
 const API_KEY = process.env.NEXT_PUBLIC_VIGIL_API_KEY || '';
 
-export default function AlliesTab() {
+export default function AlliesTab({ realm }: { realm?: 'ai' | 'human' }) {
+  const realmLabel = realm === 'human' ? 'HUMINT Allies (AXIOM Network)' : 'SIGINT Allies (ClarionAgent Network)';
+  const realmColor = realm === 'human' ? '#f59e0b' : '#06b6d4';
   const [isLive, setIsLive] = useState(false);
 
   useEffect(() => {
@@ -27,8 +29,8 @@ export default function AlliesTab() {
     <div className="flex flex-col gap-4">
       <div className="flex items-center gap-2 px-1">
         <Dot color={isLive ? '#10b981' : '#f59e0b'} pulse={isLive} />
-        <span className="font-mono text-[10px] tracking-wider" style={{ color: isLive ? '#10b981' : '#f59e0b' }}>
-          {isLive ? `LIVE — VPS CONNECTED · ${ALLIES.length} ALLIES TRACKED` : 'STATIC DATA — VPS UNREACHABLE'}
+        <span className="font-mono text-[10px] tracking-wider" style={{ color: isLive ? realmColor : '#f59e0b' }}>
+          {isLive ? `${realmLabel} — ${ALLIES.length} ALLIES TRACKED` : 'STATIC DATA — VPS UNREACHABLE'}
         </span>
       </div>
       {/* Trust Ladder Legend */}

@@ -28,7 +28,7 @@ export default function NotebookTab() {
 
   return (
     <div className="flex flex-col gap-4">
-      <Card title="Josh's Notebook — Add Your Observations" icon="&#x1F4DD;" accent="#10b981" full>
+      <Card title="DIRECTOR's Notebook — Add Your Observations" icon="&#x1F4DD;" accent="#10b981" full>
         {/* Input area - only for admin/analyst */}
         {canWrite && (
           <div className="mb-3">

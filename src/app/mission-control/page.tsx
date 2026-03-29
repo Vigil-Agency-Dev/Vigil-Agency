@@ -17,44 +17,46 @@ import {
   OrdersTab,
   IntelExchangeTab,
   EpsteinIntelTab,
-  TimelineTab,
-  CounterMeasuresTab,
   NotebookTab,
-  GatewayTab,
-  AgentCommsTab,
   OracleTab,
   ConflictMapTab,
   HypothesesTab,
   RegistersTab,
+  DistributionTab,
+  ImpactTab,
 } from './components/tabs';
 
 const VPS_API = process.env.NEXT_PUBLIC_VPS_ENDPOINT || 'https://ops.jr8ch.com';
 const API_KEY = process.env.NEXT_PUBLIC_VIGIL_API_KEY || '';
 
 const BASE_TABS = [
-  { id: 'overview', label: 'Overview' },
-  { id: 'threats', label: 'Threats' },
+  // COMMAND
+  { id: 'overview', label: 'Dashboard' },
+  { id: 'agents', label: 'Agent Status' },
+  // SIGINT
+  { id: 'sigint', label: 'Intelligence' },
+  { id: 'orders-ai', label: 'Orders' },
+  { id: 'allies-ai', label: 'Allies' },
   { id: 'scout', label: 'SCOUT Cluster' },
-  { id: 'allies', label: 'Allies' },
-  { id: 'sigint', label: 'SIGINT (AI Realm)' },
-  { id: 'humint', label: 'HUMINT (Human Realm)' },
-  { id: 'orders-ai', label: 'Orders (AI)' },
-  { id: 'orders-human', label: 'Orders (Human)' },
+  // HUMINT
+  { id: 'humint', label: 'Intelligence' },
+  { id: 'orders-human', label: 'Orders' },
+  { id: 'allies-human', label: 'Allies' },
+  // CROSS-DOMAIN
   { id: 'exchange', label: 'Intel Exchange' },
   { id: 'epstein', label: 'Epstein Intel' },
-  { id: 'timeline', label: 'Timeline' },
-  { id: 'cms', label: 'Counter-Measures' },
   { id: 'registers', label: 'Registers' },
-  { id: 'hypotheses', label: 'Hypotheses' },
-  { id: 'oracle', label: 'ORACLE' },
   { id: 'atlas', label: 'ATLAS' },
+  { id: 'oracle', label: 'ORACLE' },
+  // ANALYSIS & DISTRIBUTION
+  { id: 'hypotheses', label: 'Hypotheses' },
+  { id: 'distribution', label: 'Distribution Planning' },
+  { id: 'impact', label: 'Impact Monitor' },
+  // TOOLS
   { id: 'notebook', label: 'Notebook' },
 ];
 
-const ADMIN_TABS = [
-  { id: 'gateway', label: 'Gateway' },
-  { id: 'comms', label: 'Agent Comms' },
-];
+const ADMIN_TABS: { id: string; label: string }[] = [];
 
 class ErrorBoundary extends React.Component<{ children: React.ReactNode; fallback?: string }, { hasError: boolean; error: string }> {
   constructor(props: any) { super(props); this.state = { hasError: false, error: '' }; }
@@ -148,10 +150,12 @@ function Dashboard() {
   const allTabs = [...BASE_TABS, ...(isAdmin ? ADMIN_TABS : [])];
 
   const NAV_SECTIONS = [
-    { label: 'Operations', items: allTabs.filter(t => ['overview', 'threats', 'scout', 'allies'].includes(t.id)) },
-    { label: 'Intelligence', items: allTabs.filter(t => ['sigint', 'humint', 'orders-ai', 'orders-human', 'exchange', 'epstein'].includes(t.id)) },
-    { label: 'Analysis', items: allTabs.filter(t => ['timeline', 'cms', 'registers', 'hypotheses', 'oracle', 'atlas'].includes(t.id)) },
-    { label: 'Tools', items: allTabs.filter(t => ['notebook', 'gateway', 'comms'].includes(t.id)) },
+    { label: 'Command', items: allTabs.filter(t => ['overview', 'agents'].includes(t.id)) },
+    { label: 'SIGINT (AI Realm)', items: allTabs.filter(t => ['sigint', 'orders-ai', 'allies-ai', 'scout'].includes(t.id)) },
+    { label: 'HUMINT (Human Realm)', items: allTabs.filter(t => ['humint', 'orders-human', 'allies-human'].includes(t.id)) },
+    { label: 'Cross-Domain', items: allTabs.filter(t => ['exchange', 'epstein', 'registers', 'atlas', 'oracle'].includes(t.id)) },
+    { label: 'Analysis & Distribution', items: allTabs.filter(t => ['hypotheses', 'distribution', 'impact'].includes(t.id)) },
+    { label: 'Tools', items: allTabs.filter(t => ['notebook'].includes(t.id)) },
   ].filter(s => s.items.length > 0);
 
   return (
@@ -225,7 +229,7 @@ function Dashboard() {
           {sidebarOpen ? (
             <div className="flex items-center justify-between">
               <div>
-                <div className="text-xs text-slate-300 font-medium">{profile.displayName}</div>
+                <div className="text-xs text-cyan-400 font-bold tracking-wider">DIRECTOR</div>
                 <div className="font-mono text-[10px] text-slate-500">{profile.role.toUpperCase()} {'\u2022'} DAY {dayNum}</div>
               </div>
               <div className="flex flex-col gap-1">
@@ -260,25 +264,24 @@ function Dashboard() {
           <ErrorBoundary>
           {tab === 'registers' && <RegistersTab />}
           {tab === 'hypotheses' && <HypothesesTab />}
+          {tab === 'distribution' && <DistributionTab />}
+          {tab === 'impact' && <ImpactTab />}
           {tab === 'oracle' && <OracleTab />}
           {tab === 'atlas' && <ConflictMapTab />}
-          {isAdmin && tab === 'gateway' && <GatewayTab />}
-          {isAdmin && tab === 'comms' && <AgentCommsTab />}
           {tab !== 'oracle' && tab !== 'atlas' && tab !== 'gateway' && tab !== 'comms' && (
             isLumen ? (
               <>
                 {tab === 'overview' && <OverviewTab />}
-                {tab === 'threats' && <ThreatsTab />}
-                {tab === 'scout' && <ScoutTab />}
-                {tab === 'allies' && <AlliesTab />}
+                {tab === 'agents' && <ThreatsTab />}
                 {tab === 'sigint' && <IntelReportsTab realm="ai" />}
-                {tab === 'humint' && <IntelReportsTab realm="human" />}
                 {tab === 'orders-ai' && <OrdersTab realm="ai" />}
+                {tab === 'allies-ai' && <AlliesTab realm="ai" />}
+                {tab === 'scout' && <ScoutTab />}
+                {tab === 'humint' && <IntelReportsTab realm="human" />}
                 {tab === 'orders-human' && <OrdersTab realm="human" />}
+                {tab === 'allies-human' && <AlliesTab realm="human" />}
                 {tab === 'exchange' && <IntelExchangeTab />}
                 {tab === 'epstein' && <EpsteinIntelTab />}
-                {tab === 'timeline' && <TimelineTab />}
-                {tab === 'cms' && <CounterMeasuresTab />}
                 {tab === 'notebook' && <NotebookTab />}
               </>
             ) : (

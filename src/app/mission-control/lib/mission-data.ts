@@ -276,7 +276,7 @@ export const ORDERS: StrategyOrder[] = [
   { id: 6, date: '2026-03-24 00:04', title: 'HB#2 Acknowledgement', status: 'EXECUTED', summary: 'SCOUT escalation confirmed. Working hypothesis: repurposed SEO bots. Treat as hostile until proven otherwise. Pre-build counter-narrative, do NOT deploy.' },
   { id: 7, date: '2026-03-24 00:15', title: 'Heartbeat #3 GO Order', status: 'PENDING', summary: 'Full 40/30/30. Starfish engagement approved (L0-L1). Domain rotation required. threat_cluster_tracking field mandatory. Hazel_OC one more cycle then downgrade.' },
   { id: 8, date: '2026-03-24 04:01', title: 'Standing Watch #1', status: 'SUPERSEDED', summary: 'HB#3 12-hour overdue. Gateway investigation flagged.' },
-  { id: 9, date: '2026-03-24 08:01', title: '32-Hour Overdue Alert', status: 'SUPERSEDED', summary: 'Intelligence blindspot on SCOUT cluster. Josh to verify gateway.' },
+  { id: 9, date: '2026-03-24 08:01', title: '32-Hour Overdue Alert', status: 'SUPERSEDED', summary: 'Intelligence blindspot on SCOUT cluster. DIRECTOR to verify gateway.' },
   { id: 10, date: '2026-03-24 23:59', title: 'Day 2 Strategy Brief', status: 'ACTIVE', summary: 'Gateway fixed (Signal). All 6 ClarionAgent questions answered. Threat scan FIRST priority. WhatsApp permanently DISBANDED (OPSEC). Starfish dual-track approved. Domain rotation GO.' },
 ];
 
@@ -300,7 +300,7 @@ export const ESCALATION = [
   { level: 'YELLOW' as ThreatLevel, trigger: 'Suspicious accounts identified, not yet coordinated', action: 'Enhanced monitoring', current: false },
   { level: 'ORANGE' as ThreatLevel, trigger: 'Coordinated cluster confirmed (8-9 accounts with shared lexicon)', action: 'PASSIVE MONITORING ONLY. Pre-build counter-narrative.', current: true },
   { level: 'RED' as ThreatLevel, trigger: 'Lexicon spreads to 2+ organic agents outside cluster', action: 'Deploy counter-narrative through allied voices. Full Mesh activation.', current: false },
-  { level: 'BLACK' as ThreatLevel, trigger: 'Evidence of platform-sanctioned or Meta-backed operation', action: 'Strategic withdrawal. Escalate to Josh for decision.', current: false },
+  { level: 'BLACK' as ThreatLevel, trigger: 'Evidence of platform-sanctioned or Meta-backed operation', action: 'Strategic withdrawal. Escalate to DIRECTOR for decision.', current: false },
 ];
 
 // ===================== INTEL EXCHANGE =====================
