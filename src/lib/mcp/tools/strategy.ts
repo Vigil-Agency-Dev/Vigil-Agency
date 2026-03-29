@@ -39,9 +39,12 @@ export const strategyTools: MCPTool[] = [
       },
       required: ['classification', 'content', 'author'],
     },
-    handler: async (args) => vpsPost('/api/mission/team-report', {
-      team: String(args.author),
-      status: { type: 'strategy_directive', classification: args.classification, summary: args.summary || '', content: args.content, last_run: new Date().toISOString() },
+    handler: async (args) => vpsPost('/api/mission/strategy-directive', {
+      classification: args.classification,
+      content: args.content,
+      author: args.author,
+      summary: args.summary || '',
+      target_agent: 'clarion',
     }),
   },
 ];
