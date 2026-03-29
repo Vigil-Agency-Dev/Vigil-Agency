@@ -8,6 +8,7 @@ import { Dot } from './components/ui';
 import SignIn from './components/SignIn';
 import AdminPanel from './components/AdminPanel';
 import OperationSelector from './components/OperationSelector';
+import { usePresence, useOnlineUsers } from './lib/presence';
 import {
   OverviewTab,
   ThreatsTab,
@@ -80,6 +81,10 @@ function Dashboard() {
   const [tab, setTab] = useState('overview');
   const [showAdmin, setShowAdmin] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
+
+  // Presence tracking
+  usePresence(user?.uid || null, 'DIRECTOR', profile?.role || 'admin');
+  const onlineUsers = useOnlineUsers();
   const [ops, setOps] = useState<Operation[]>(OPERATIONS);
   const [currentOp, setCurrentOp] = useState<Operation>(OPERATIONS[0]);
   const isLumen = currentOp.id === 'op-001';
@@ -226,6 +231,25 @@ function Dashboard() {
 
         {/* User + Logout */}
         <div className="border-t border-[#1e2d44] px-3 py-3">
+          {/* Online Users */}
+          {sidebarOpen && onlineUsers.length > 0 && (
+            <div className="mb-3 pb-3 border-b border-[#1e2d44]">
+              <div className="text-[9px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Personnel</div>
+              {onlineUsers.map(u => (
+                <div key={u.uid} className="flex items-center gap-2 py-0.5">
+                  <div className={`w-1.5 h-1.5 rounded-full ${u.online ? 'bg-green-500' : 'bg-slate-600'}`} />
+                  <span className={`font-mono text-[10px] ${u.online ? 'text-slate-300' : 'text-slate-600'}`}>{u.displayName}</span>
+                  <span className="font-mono text-[8px] text-slate-600">{u.role?.toUpperCase()}</span>
+                  {!u.online && u.lastSeen && (
+                    <span className="font-mono text-[8px] text-slate-700">
+                      {u.lastSeen?.toDate ? new Date(u.lastSeen.toDate()).toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit' }) : ''}
+                    </span>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+
           {sidebarOpen ? (
             <div className="flex items-center justify-between">
               <div>
