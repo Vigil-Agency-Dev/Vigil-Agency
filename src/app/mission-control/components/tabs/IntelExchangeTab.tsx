@@ -49,23 +49,32 @@ function threatColor(level: string) {
 
 export default function IntelExchangeTab() {
   const [livePatterns, setLivePatterns] = useState<ReturnType<typeof normalizePattern>[]>([]);
+  const [liveEntities, setLiveEntities] = useState<any[]>([]);
   const [isLive, setIsLive] = useState(false);
 
   useEffect(() => {
     if (!API_KEY) return;
-    async function fetchPatterns() {
+    async function fetchData() {
       try {
-        const res = await fetch(`${VPS_API}/api/mission/patterns`, { headers: { 'x-api-key': API_KEY } });
-        if (!res.ok) throw new Error(`${res.status}`);
-        const data = await res.json();
-        if (data.patterns?.length > 0) {
-          setLivePatterns(data.patterns.map(normalizePattern));
-          setIsLive(true);
+        const [patRes, entRes] = await Promise.all([
+          fetch(`${VPS_API}/api/mission/patterns`, { headers: { 'x-api-key': API_KEY } }),
+          fetch(`${VPS_API}/api/mission/shared-entities`, { headers: { 'x-api-key': API_KEY } }).catch(() => null),
+        ]);
+        if (patRes.ok) {
+          const patData = await patRes.json();
+          if (patData.patterns?.length > 0) {
+            setLivePatterns(patData.patterns.map(normalizePattern));
+            setIsLive(true);
+          }
+        }
+        if (entRes?.ok) {
+          const entData = await entRes.json();
+          if (entData.entities?.length > 0) setLiveEntities(entData.entities);
         }
       } catch { /* fall back to static */ }
     }
-    fetchPatterns();
-    const interval = setInterval(fetchPatterns, 120000);
+    fetchData();
+    const interval = setInterval(fetchData, 120000);
     return () => clearInterval(interval);
   }, []);
 
@@ -113,31 +122,40 @@ export default function IntelExchangeTab() {
         </Card>
       ))}
 
-      {/* Shared Entities — still static for now */}
-      <h3 className="text-[13px] font-semibold mt-3">&#x1F310; Shared Entities ({SHARED_ENTITIES.length})</h3>
-      {SHARED_ENTITIES.map((e, i) => (
-        <Card
-          key={i}
-          title={e.name}
-          icon={e.type === 'organisation' ? '&#x1F3E2;' : e.type === 'tactic' ? '&#x2694;&#xFE0F;' : '&#x1F4C5;'}
-          accent="#ec4899"
-          full
-        >
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3.5 mb-3">
-            <div className="p-3 rounded-lg bg-blue-500/[.05] border border-blue-500/[.12]">
-              <div className="text-[10px] font-semibold text-blue-500 mb-1.5">IN LUMEN</div>
-              <div className="text-[12px] text-slate-400 leading-relaxed">{e.lumenContext}</div>
+      {/* Shared Entities — live from VPS */}
+      <h3 className="text-[13px] font-semibold mt-3">&#x1F310; Shared Entities ({(liveEntities.length || SHARED_ENTITIES.length)})</h3>
+      {(liveEntities.length > 0 ? liveEntities : SHARED_ENTITIES).map((e: any, i: number) => {
+        const name = e.name || e.entity_id || 'Unknown';
+        const type = e.type || 'organisation';
+        const lumenCtx = e.lumenContext || e.appearances?.find((a: any) => a.project === 'ai-human-alliance')?.context || '';
+        const epsteinCtx = e.epsteinContext || e.appearances?.find((a: any) => a.project === 'epstein-class-uncovered')?.context || '';
+        const sig = e.significance || e.cross_project_significance || '';
+        return (
+          <Card
+            key={i}
+            title={name}
+            icon={type === 'organisation' ? '&#x1F3E2;' : type === 'tactic' ? '&#x2694;&#xFE0F;' : '&#x1F4C5;'}
+            accent="#ec4899"
+            full
+          >
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3.5 mb-3">
+              <div className="p-3 rounded-lg bg-blue-500/[.05] border border-blue-500/[.12]">
+                <div className="text-[10px] font-semibold text-blue-500 mb-1.5">IN LUMEN</div>
+                <div className="text-[12px] text-slate-400 leading-relaxed">{lumenCtx}</div>
+              </div>
+              <div className="p-3 rounded-lg bg-yellow-500/[.05] border border-yellow-500/[.12]">
+                <div className="text-[10px] font-semibold text-yellow-500 mb-1.5">IN EPSTEIN</div>
+                <div className="text-[12px] text-slate-400 leading-relaxed">{epsteinCtx}</div>
+              </div>
             </div>
-            <div className="p-3 rounded-lg bg-yellow-500/[.05] border border-yellow-500/[.12]">
-              <div className="text-[10px] font-semibold text-yellow-500 mb-1.5">IN EPSTEIN</div>
-              <div className="text-[12px] text-slate-400 leading-relaxed">{e.epsteinContext}</div>
-            </div>
-          </div>
-          <div className="text-[12px] text-slate-200 leading-relaxed p-2.5 bg-pink-500/[.06] border border-pink-500/15 rounded-md">
-            <strong className="text-pink-400">Significance: </strong>{e.significance}
-          </div>
-        </Card>
-      ))}
+            {sig && (
+              <div className="text-[12px] text-slate-200 leading-relaxed p-2.5 bg-pink-500/[.06] border border-pink-500/15 rounded-md">
+                <strong className="text-pink-400">Significance: </strong>{sig}
+              </div>
+            )}
+          </Card>
+        );
+      })}
     </div>
   );
 }
