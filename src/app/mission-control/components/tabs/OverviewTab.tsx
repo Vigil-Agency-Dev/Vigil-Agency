@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import { formatAESTShort } from '../../lib/date-utils';
 import { Badge, Card, Dot } from '../ui';
 import LiveIntelFeed from '../LiveIntelFeed';
 import { MISSION, STATS, ALLIES, SCOUT, PATTERN_MATCHES, SHARED_ENTITIES, EPSTEIN_INTEL, COMMS_CHANNELS } from '../../lib/mission-data';
@@ -80,7 +81,7 @@ function MCAnalysis({ raw, filename, mcStatus }: { raw: string; filename: string
             <div className="flex items-center gap-2 mt-0.5">
               {mcStatus?.last_analysis && (
                 <span className="font-mono text-[10px] text-slate-500">
-                  {new Date(mcStatus.last_analysis as string).toLocaleString()}
+                  {formatAESTShort(mcStatus.last_analysis as string)}
                 </span>
               )}
               {mcStatus?.model_used && (
@@ -186,7 +187,7 @@ export default function OverviewTab() {
         </span>
         {live && lastHB && (
           <span className="font-mono text-[10px] text-slate-500 ml-2">
-            Last HB: {new Date(lastHB).toLocaleString()}
+            Last HB: {formatAESTShort(lastHB)}
           </span>
         )}
       </div>
@@ -202,7 +203,7 @@ export default function OverviewTab() {
               </span>
             </div>
             <span className="font-mono text-[10px] text-slate-500">
-              {mcStatus?.last_analysis ? new Date(mcStatus.last_analysis as string).toLocaleString() : ''}
+              {mcStatus?.last_analysis ? formatAESTShort(mcStatus.last_analysis as string) : ''}
               {mcStatus?.model_used ? ` · ${(mcStatus.model_used as string).includes('opus') ? 'Opus Analysis' : 'Sonnet Analysis'}` : ''}
             </span>
           </div>
@@ -269,12 +270,12 @@ export default function OverviewTab() {
                   </div>
                   {agent.lastHeartbeat && (
                     <div className="text-[9px] text-slate-600 mt-0.5 font-mono">
-                      Last HB: {new Date(agent.lastHeartbeat).toLocaleTimeString()}
+                      Last HB: {formatAESTShort(agent.lastHeartbeat)}
                     </div>
                   )}
                   {agent.lastAnalysis && (
                     <div className="text-[9px] text-slate-600 mt-0.5 font-mono">
-                      Last analysis: {new Date(agent.lastAnalysis).toLocaleTimeString()}
+                      Last analysis: {formatAESTShort(agent.lastAnalysis)}
                       {agent.model && ` (${agent.model.includes('opus') ? 'Opus' : 'Sonnet'})`}
                     </div>
                   )}
@@ -290,7 +291,7 @@ export default function OverviewTab() {
         <Card title="Mission Control Analyst" icon="&#x1F9E0;" accent="#8b5cf6">
           <div className="grid grid-cols-2 gap-2">
             <div className="text-[10px] text-slate-500">Last Analysis</div>
-            <div className="text-[11px] text-slate-300 font-mono">{new Date(mcStatus.last_analysis as string).toLocaleString()}</div>
+            <div className="text-[11px] text-slate-300 font-mono">{formatAESTShort(mcStatus.last_analysis as string)}</div>
             <div className="text-[10px] text-slate-500">Model</div>
             <div className="text-[11px] text-slate-300 font-mono">{(mcStatus.model_used as string || '').includes('opus') ? 'Claude Opus (Critical)' : 'Claude Sonnet (Routine)'}</div>
             <div className="text-[10px] text-slate-500">Priority</div>

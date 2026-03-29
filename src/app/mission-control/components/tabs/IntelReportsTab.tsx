@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Badge, Card, Dot } from '../ui';
 import { INTEL_REPORTS } from '../../lib/mission-data';
+import { formatAESTShort, timeAgo as timeAgoUtil } from '../../lib/date-utils';
 
 const VPS_API = process.env.NEXT_PUBLIC_VPS_ENDPOINT || 'https://ops.jr8ch.com';
 const API_KEY = process.env.NEXT_PUBLIC_VIGIL_API_KEY || '';
@@ -30,13 +31,7 @@ function priorityColor(p: string) {
   return '#64748b';
 }
 
-function timeAgo(ts: string) {
-  const diff = Date.now() - new Date(ts).getTime();
-  const hrs = Math.floor(diff / 3600000);
-  if (hrs < 1) return `${Math.floor(diff / 60000)}m ago`;
-  if (hrs < 24) return `${hrs}h ago`;
-  return `${Math.floor(hrs / 24)}d ago`;
-}
+function timeAgo(ts: string) { return timeAgoUtil(ts); }
 
 function hasContent(r: LiveIntelReport) {
   return (r.findings?.length > 0) || (r.questions?.length > 0) || (r.redFlags?.length > 0) || r.actionsCount > 0;
@@ -108,14 +103,15 @@ export default function IntelReportsTab({ realm }: { realm?: 'ai' | 'human' }) {
         </div>
       );
     }
-    let filtered = liveReports;
-    if (filterPriority) filtered = filtered.filter(r => r.priority === filterPriority);
-    if (!showEmpty) filtered = filtered.filter(r => hasContent(r));
+    // Apply showEmpty filter first (base set)
+    const baseReports = showEmpty ? liveReports : liveReports.filter(r => hasContent(r));
+    // Then apply priority filter
+    const filtered = filterPriority ? baseReports.filter(r => r.priority === filterPriority) : baseReports;
 
     const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
     const paged = filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
     const withContent = liveReports.filter(hasContent).length;
-    const priorities = [...new Set(liveReports.map(r => r.priority))];
+    const priorities = [...new Set(baseReports.map(r => r.priority))].filter(Boolean);
 
     return (
       <div className="flex flex-col gap-4">
@@ -142,7 +138,7 @@ export default function IntelReportsTab({ realm }: { realm?: 'ai' | 'human' }) {
             onClick={() => { setFilterPriority(null); setPage(0); }}
             className={`py-1 px-3 rounded text-[11px] font-mono transition-colors ${!filterPriority ? 'bg-cyan-500/15 text-cyan-400 border border-cyan-500/30' : 'bg-[#1a2235] text-slate-500 border border-transparent hover:text-slate-300'}`}
           >
-            ALL ({filtered.length})
+            ALL ({baseReports.length})
           </button>
           {priorities.map(p => (
             <button
@@ -151,7 +147,7 @@ export default function IntelReportsTab({ realm }: { realm?: 'ai' | 'human' }) {
               className={`py-1 px-3 rounded text-[11px] font-mono transition-colors ${filterPriority === p ? `text-white border` : 'bg-[#1a2235] text-slate-500 border border-transparent hover:text-slate-300'}`}
               style={filterPriority === p ? { background: `${priorityColor(p)}20`, borderColor: `${priorityColor(p)}40`, color: priorityColor(p) } : {}}
             >
-              {p} ({liveReports.filter(r => r.priority === p).length})
+              {p} ({baseReports.filter(r => r.priority === p).length})
             </button>
           ))}
         </div>
@@ -180,7 +176,7 @@ export default function IntelReportsTab({ realm }: { realm?: 'ai' | 'human' }) {
                       {r.heartbeat && <span className="font-mono text-[11px] text-cyan-500">HB #{r.heartbeat}</span>}
                     </div>
                     <div className="flex items-center gap-3 mt-0.5">
-                      <span className="font-mono text-[11px] text-slate-500">{r.timestamp ? new Date(r.timestamp).toLocaleString('en-AU', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : ''}</span>
+                      <span className="font-mono text-[11px] text-slate-500">{formatAESTShort(r.timestamp)}</span>
                       {r.timestamp && <span className="text-[11px] text-slate-600">{timeAgo(r.timestamp)}</span>}
                     </div>
                   </div>

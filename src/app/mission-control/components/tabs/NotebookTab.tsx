@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { formatAESTShort } from '../../lib/date-utils';
 import { Card } from '../ui';
 import { useAuth } from '../../lib/auth-context';
 import { NOTEBOOK_TAGS, TAG_COLORS } from '../../lib/mission-data';
@@ -81,7 +82,7 @@ export default function NotebookTab() {
                 {n.tag}
               </span>
               <span className="font-mono text-[9px] text-slate-500">
-                {new Date(n.time).toLocaleString()}
+                {formatAESTShort(n.time)}
               </span>
               <span className="text-[10px] text-purple-400">{n.author}</span>
             </div>

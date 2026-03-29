@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
+import { formatAESTShort } from '../lib/date-utils';
 
 const VPS_API = process.env.NEXT_PUBLIC_VPS_ENDPOINT || 'https://ops.jr8ch.com';
 const API_KEY = process.env.NEXT_PUBLIC_VIGIL_API_KEY || '';
@@ -123,7 +124,7 @@ export default function NotificationCentre() {
                     </button>
                   </div>
                   <div className="font-mono text-[9px] text-slate-700 mt-1">
-                    {new Date(item.submittedAt).toLocaleString('en-AU', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                    {formatAESTShort(item.submittedAt)}
                   </div>
                 </div>
               ))}
