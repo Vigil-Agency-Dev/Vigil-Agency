@@ -47,4 +47,23 @@ export const reportTools: MCPTool[] = [
       },
     }),
   },
+  {
+    name: 'get_reddit_queue',
+    description: 'Get AXIOM Reddit approval queue — comments/posts awaiting DIRECTOR approval before posting.',
+    inputSchema: { type: 'object', properties: {}, required: [] },
+    handler: async () => vpsGet('/api/axiom-reddit/queue'),
+  },
+  {
+    name: 'approve_reddit_item',
+    description: 'Approve or reject an AXIOM Reddit queue item.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        filename: { type: 'string', description: 'Queue item filename' },
+        action: { type: 'string', enum: ['approve', 'reject'], description: 'Approve or reject' },
+      },
+      required: ['filename', 'action'],
+    },
+    handler: async (args) => vpsPost('/api/axiom-reddit/approve', { filename: args.filename, action: args.action }),
+  },
 ];
