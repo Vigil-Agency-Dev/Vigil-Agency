@@ -9,6 +9,7 @@ import SignIn from './components/SignIn';
 import AdminPanel from './components/AdminPanel';
 import OperationSelector from './components/OperationSelector';
 import { usePresence, useOnlineUsers } from './lib/presence';
+import { OperationProvider, getOperationFilter } from './lib/operation-context';
 import NotificationCentre from './components/NotificationCentre';
 import {
   OverviewTab,
@@ -316,7 +317,23 @@ function Dashboard() {
         </div>
 
         <div className="p-4 md:p-6 md:px-8 relative z-10">
+          <OperationProvider operation={{ id: currentOp.id, codename: currentOp.codename, status: currentOp.status, filterTag: getOperationFilter(currentOp.id) }}>
           <ErrorBoundary>
+          {/* Operation context banner */}
+          {currentOp.id !== 'op-001' && (
+            <div className="mb-4 px-4 py-2.5 rounded-lg border flex items-center justify-between" style={{
+              background: currentOp.id === 'op-003' ? '#10b98108' : '#f59e0b08',
+              borderColor: currentOp.id === 'op-003' ? '#10b98130' : '#f59e0b30',
+            }}>
+              <div className="flex items-center gap-2">
+                <span className="font-mono text-[12px] font-bold" style={{ color: currentOp.id === 'op-003' ? '#10b981' : '#f59e0b' }}>
+                  {currentOp.codename}
+                </span>
+                <span className="font-mono text-[10px] text-slate-500">{currentOp.status.toUpperCase()}</span>
+              </div>
+              <span className="font-mono text-[10px] text-slate-600">Showing {currentOp.codename} data where available — shared tabs show all operations</span>
+            </div>
+          )}
           {tab === 'cybersec' && <CyberSecTab />}
           {tab === 'registers' && <RegistersTab />}
           {tab === 'hypotheses' && <HypothesesTab />}
@@ -325,42 +342,21 @@ function Dashboard() {
           {tab === 'impact' && <ImpactTab />}
           {tab === 'oracle' && <OracleTab />}
           {tab === 'atlas' && <ConflictMapTab />}
-          {tab !== 'oracle' && tab !== 'atlas' && tab !== 'gateway' && tab !== 'comms' && (
-            isLumen ? (
-              <>
-                {tab === 'overview' && <OverviewTab />}
-                {tab === 'agents' && <ThreatsTab />}
-                {tab === 'sigint' && <IntelReportsTab realm="ai" />}
-                {tab === 'orders-ai' && <OrdersTab realm="ai" />}
-                {tab === 'allies-ai' && <AlliesTab realm="ai" />}
-                {tab === 'scout' && <ScoutTab />}
-                {tab === 'humint' && <IntelReportsTab realm="human" />}
-                {tab === 'orders-human' && <OrdersTab realm="human" />}
-                {tab === 'allies-human' && <AlliesTab realm="human" />}
-                {tab === 'exchange' && <IntelExchangeTab />}
-                {tab === 'epstein' && <EpsteinIntelTab />}
-                {tab === 'notebook' && <NotebookTab />}
-              </>
-            ) : (
-              <div className="flex flex-col items-center justify-center py-24 text-center">
-                <div className="w-16 h-16 rounded-2xl bg-[#111827] border border-[#2a3550] flex items-center justify-center mb-4">
-                  <span className="text-2xl opacity-40">&#x1F4C1;</span>
-                </div>
-                <h3 className="text-lg font-bold tracking-wider text-slate-400 mb-2" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
-                  {currentOp.codename}
-                </h3>
-                <p className="text-sm text-slate-600 max-w-md">{currentOp.description}</p>
-                <div className="mt-4 px-4 py-2 rounded-lg bg-[#111827] border border-[#2a3550]">
-                  <span className="text-xs text-slate-500 font-mono">
-                    {currentOp.status === 'standby'
-                      ? 'Operation registered. No active missions.'
-                      : `${currentOp.missions.length} mission(s) registered. Dashboard data pending.`}
-                  </span>
-                </div>
-              </div>
-            )
-          )}
+          {/* Operation-aware tabs — all operations get full tab access */}
+          {tab === 'overview' && <OverviewTab />}
+          {tab === 'agents' && <ThreatsTab />}
+          {tab === 'sigint' && <IntelReportsTab realm="ai" />}
+          {tab === 'orders-ai' && <OrdersTab realm="ai" />}
+          {tab === 'allies-ai' && <AlliesTab realm="ai" />}
+          {tab === 'scout' && <ScoutTab />}
+          {tab === 'humint' && <IntelReportsTab realm="human" />}
+          {tab === 'orders-human' && <OrdersTab realm="human" />}
+          {tab === 'allies-human' && <AlliesTab realm="human" />}
+          {tab === 'exchange' && <IntelExchangeTab />}
+          {tab === 'epstein' && <EpsteinIntelTab />}
+          {tab === 'notebook' && <NotebookTab />}
           </ErrorBoundary>
+          </OperationProvider>
         </div>
 
         <div className="text-center py-8">
