@@ -41,7 +41,10 @@ export default function ThreatsTab() {
     return () => clearInterval(interval);
   }, []);
 
+  const [loaded, setLoaded] = useState(false);
+  useEffect(() => { const t = setTimeout(() => setLoaded(true), 1500); return () => clearTimeout(t); }, []);
   const threats = isLive ? liveThreats : VECTORS;
+  if (!loaded && !isLive) return <div className="flex items-center justify-center py-20"><div className="font-mono text-xs text-slate-600 tracking-[.2em]">LOADING...</div></div>;
 
   return (
     <div className="flex flex-col gap-4">

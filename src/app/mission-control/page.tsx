@@ -133,8 +133,8 @@ function Dashboard() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#060a12]">
         <div className="text-center">
-          <img src="/images/brand/vigil-logo.png" alt="VIGIL" className="w-14 h-14 mb-3 animate-pulse object-contain" />
-          <div className="font-mono text-sm text-cyan-400 tracking-widest">AUTHENTICATING...</div>
+          <img src="/images/brand/vigil-logo.png" alt="VIGIL" className="w-12 h-12 mb-4 object-contain opacity-40" />
+          <div className="font-mono text-xs text-slate-600 tracking-[.3em]">VIGIL</div>
         </div>
       </div>
     );
