@@ -27,6 +27,7 @@ import {
   DistributionTab,
   ImpactTab,
   CyberSecTab,
+  HeraldTab,
 } from './components/tabs';
 
 const VPS_API = process.env.NEXT_PUBLIC_VPS_ENDPOINT || 'https://ops.jr8ch.com';
@@ -54,6 +55,7 @@ const BASE_TABS = [
   { id: 'oracle', label: 'ORACLE' },
   // ANALYSIS & DISTRIBUTION
   { id: 'hypotheses', label: 'Hypotheses' },
+  { id: 'herald', label: 'HERALD' },
   { id: 'distribution', label: 'Distribution Planning' },
   { id: 'impact', label: 'Impact Monitor' },
   // TOOLS
@@ -175,7 +177,7 @@ function Dashboard() {
     { label: 'SIGINT (AI Realm)', items: allTabs.filter(t => ['sigint', 'orders-ai', 'allies-ai', 'scout'].includes(t.id)) },
     { label: 'HUMINT (Human Realm)', items: allTabs.filter(t => ['humint', 'orders-human', 'allies-human'].includes(t.id)) },
     { label: 'Cross-Domain', items: allTabs.filter(t => ['exchange', 'epstein', 'registers', 'atlas', 'oracle'].includes(t.id)) },
-    { label: 'Analysis & Distribution', items: allTabs.filter(t => ['hypotheses', 'distribution', 'impact'].includes(t.id)) },
+    { label: 'Analysis & Distribution', items: allTabs.filter(t => ['hypotheses', 'herald', 'distribution', 'impact'].includes(t.id)) },
     { label: 'Tools', items: allTabs.filter(t => ['notebook'].includes(t.id)) },
   ].filter(s => s.items.length > 0);
 
@@ -318,6 +320,7 @@ function Dashboard() {
           {tab === 'cybersec' && <CyberSecTab />}
           {tab === 'registers' && <RegistersTab />}
           {tab === 'hypotheses' && <HypothesesTab />}
+          {tab === 'herald' && <HeraldTab />}
           {tab === 'distribution' && <DistributionTab />}
           {tab === 'impact' && <ImpactTab />}
           {tab === 'oracle' && <OracleTab />}
