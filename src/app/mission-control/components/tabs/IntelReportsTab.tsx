@@ -70,11 +70,17 @@ export default function IntelReportsTab({ realm }: { realm?: 'ai' | 'human' }) {
           allReports = [...allReports, ...reports];
         }
 
-        // Filter by realm
+        // Filter by realm (case-insensitive)
         if (realm === 'human') {
-          allReports = allReports.filter(r => r.filename?.includes('axiom') || r.filename?.includes('humint'));
+          allReports = allReports.filter(r => {
+            const fn = (r.filename || '').toLowerCase();
+            return fn.includes('axiom') || fn.includes('humint');
+          });
         } else if (realm === 'ai') {
-          allReports = allReports.filter(r => !r.filename?.includes('axiom') && !r.filename?.includes('humint'));
+          allReports = allReports.filter(r => {
+            const fn = (r.filename || '').toLowerCase();
+            return !fn.includes('axiom') && !fn.includes('humint');
+          });
         }
 
         setLiveReports(allReports);
