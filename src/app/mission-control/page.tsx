@@ -9,6 +9,7 @@ import SignIn from './components/SignIn';
 import AdminPanel from './components/AdminPanel';
 import OperationSelector from './components/OperationSelector';
 import { usePresence, useOnlineUsers } from './lib/presence';
+import NotificationCentre from './components/NotificationCentre';
 import {
   OverviewTab,
   ThreatsTab,
@@ -178,9 +179,12 @@ function Dashboard() {
               <div className="text-[10px] text-slate-500 truncate">Mission Control</div>
             </div>
           )}
-          <button onClick={() => setSidebarOpen(!sidebarOpen)} className="ml-auto text-slate-500 hover:text-slate-300 text-sm shrink-0">
-            {sidebarOpen ? '\u2190' : '\u2192'}
-          </button>
+          <div className="ml-auto flex items-center gap-1">
+            <NotificationCentre />
+            <button onClick={() => setSidebarOpen(!sidebarOpen)} className="text-slate-500 hover:text-slate-300 text-sm shrink-0">
+              {sidebarOpen ? '\u2190' : '\u2192'}
+            </button>
+          </div>
         </div>
 
         {/* Operation Selector */}
