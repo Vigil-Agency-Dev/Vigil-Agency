@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Badge, Dot } from '../ui';
 import { ORDERS } from '../../lib/mission-data';
+import { formatAESTShort } from '../../lib/date-utils';
 
 const VPS_API = process.env.NEXT_PUBLIC_VPS_ENDPOINT || 'https://ops.jr8ch.com';
 const API_KEY = process.env.NEXT_PUBLIC_VIGIL_API_KEY || '';
@@ -98,8 +99,25 @@ export default function OrdersTab({ realm }: { realm?: 'ai' | 'human' }) {
         const res = await fetch(`${VPS_API}/api/mission/strategy?limit=10`, { headers: { 'x-api-key': API_KEY } });
         if (!res.ok) throw new Error(`${res.status}`);
         const data = await res.json();
-        const updates = Array.isArray(data) ? data : data.updates || data.data || [];
-        if (updates.length > 0) { setLiveStrategies(updates); setIsLive(true); }
+        let updates = Array.isArray(data) ? data : data.updates || data.data || [];
+
+        // Filter by realm
+        if (realm === 'human') {
+          updates = updates.filter((s: any) => {
+            const fn = (s.filename || '').toLowerCase();
+            const raw = (s.raw || s.content || '').toLowerCase();
+            return fn.includes('axiom') || raw.includes('axiom') || fn.includes('humint');
+          });
+        } else if (realm === 'ai') {
+          updates = updates.filter((s: any) => {
+            const fn = (s.filename || '').toLowerCase();
+            const raw = (s.raw || s.content || '').toLowerCase();
+            return !fn.includes('axiom') && !fn.includes('humint');
+          });
+        }
+
+        setLiveStrategies(updates);
+        setIsLive(true);
       } catch { /* static fallback */ }
     }
     fetchStrategy();
@@ -107,7 +125,21 @@ export default function OrdersTab({ realm }: { realm?: 'ai' | 'human' }) {
     return () => clearInterval(interval);
   }, []);
 
-  if (isLive && liveStrategies.length > 0) {
+  if (isLive) {
+    if (liveStrategies.length === 0 && realm) {
+      return (
+        <div className="flex flex-col gap-4">
+          <div className="flex items-center gap-2 px-1">
+            <Dot color={realmColor} pulse />
+            <span className="font-mono text-xs tracking-wider" style={{ color: realmColor }}>{realmLabel} — CONNECTED</span>
+          </div>
+          <div className="text-center py-12 bg-[#111b2a] border border-[#1e2d44] rounded-xl">
+            <div className="text-[14px] text-slate-500">{realm === 'human' ? 'No AXIOM directives issued yet' : 'No ClarionAgent directives in current window'}</div>
+          </div>
+        </div>
+      );
+    }
+    if (liveStrategies.length > 0) {
     return (
       <div className="flex flex-col gap-4">
         <div className="flex items-center gap-2">
@@ -183,7 +215,7 @@ export default function OrdersTab({ realm }: { realm?: 'ai' | 'human' }) {
         })}
       </div>
     );
-  }
+  }}
 
   // Static fallback
   return (
