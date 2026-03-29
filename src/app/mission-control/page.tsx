@@ -25,6 +25,7 @@ import {
   RegistersTab,
   DistributionTab,
   ImpactTab,
+  CyberSecTab,
 } from './components/tabs';
 
 const VPS_API = process.env.NEXT_PUBLIC_VPS_ENDPOINT || 'https://ops.jr8ch.com';
@@ -34,6 +35,7 @@ const BASE_TABS = [
   // COMMAND
   { id: 'overview', label: 'Dashboard' },
   { id: 'agents', label: 'Agent Status' },
+  { id: 'cybersec', label: 'Cyber Security' },
   // SIGINT
   { id: 'sigint', label: 'Intelligence' },
   { id: 'orders-ai', label: 'Orders' },
@@ -155,7 +157,7 @@ function Dashboard() {
   const allTabs = [...BASE_TABS, ...(isAdmin ? ADMIN_TABS : [])];
 
   const NAV_SECTIONS = [
-    { label: 'Command', items: allTabs.filter(t => ['overview', 'agents'].includes(t.id)) },
+    { label: 'Command', items: allTabs.filter(t => ['overview', 'agents', 'cybersec'].includes(t.id)) },
     { label: 'SIGINT (AI Realm)', items: allTabs.filter(t => ['sigint', 'orders-ai', 'allies-ai', 'scout'].includes(t.id)) },
     { label: 'HUMINT (Human Realm)', items: allTabs.filter(t => ['humint', 'orders-human', 'allies-human'].includes(t.id)) },
     { label: 'Cross-Domain', items: allTabs.filter(t => ['exchange', 'epstein', 'registers', 'atlas', 'oracle'].includes(t.id)) },
@@ -286,6 +288,7 @@ function Dashboard() {
 
         <div className="p-4 md:p-6 md:px-8 relative z-10">
           <ErrorBoundary>
+          {tab === 'cybersec' && <CyberSecTab />}
           {tab === 'registers' && <RegistersTab />}
           {tab === 'hypotheses' && <HypothesesTab />}
           {tab === 'distribution' && <DistributionTab />}

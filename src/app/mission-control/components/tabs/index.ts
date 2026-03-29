@@ -13,3 +13,4 @@ export { default as HypothesesTab } from './HypothesesTab';
 export { default as RegistersTab } from './RegistersTab';
 export { default as DistributionTab } from './DistributionTab';
 export { default as ImpactTab } from './ImpactTab';
+export { default as CyberSecTab } from './CyberSecTab';
