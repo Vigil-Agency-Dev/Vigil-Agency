@@ -169,7 +169,7 @@ function Dashboard() {
   return (
     <div className="flex h-screen overflow-hidden">
       {/* ===== SIDEBAR ===== */}
-      <aside className={`fixed md:relative z-50 h-full bg-[#0a0f1a] border-r border-[#1e2d44] flex flex-col transition-all duration-200 ${sidebarOpen ? 'w-56' : 'w-0 md:w-14 overflow-hidden'}`}>
+      <aside className={`fixed md:relative z-50 h-full bg-[#0a0f1a] border-r border-[#1e2d44] flex flex-col transition-all duration-200 ${sidebarOpen ? 'w-56' : 'w-0 overflow-hidden'}`}>
         {/* Logo + Toggle */}
         <div className="flex items-center gap-2.5 px-3 py-4 border-b border-[#1e2d44]">
           <img src="/images/brand/vigil-logo.png" alt="VIGIL" className="w-8 h-8 shrink-0 object-contain cursor-pointer" onClick={() => setSidebarOpen(!sidebarOpen)} />
@@ -275,6 +275,16 @@ function Dashboard() {
 
       {/* Mobile overlay */}
       {sidebarOpen && <div className="fixed inset-0 bg-black/50 z-40 md:hidden" onClick={() => setSidebarOpen(false)} />}
+
+      {/* Sidebar reopen button (visible when collapsed) */}
+      {!sidebarOpen && (
+        <button
+          onClick={() => setSidebarOpen(true)}
+          className="fixed top-3 left-3 z-50 w-9 h-9 rounded-lg bg-[#0a0f1a] border border-[#1e2d44] flex items-center justify-center text-slate-400 hover:text-cyan-400 hover:border-cyan-500/30 transition-all shadow-lg"
+        >
+          <img src="/images/brand/vigil-logo.png" alt="VIGIL" className="w-5 h-5 object-contain" />
+        </button>
+      )}
 
       {/* ===== MAIN CONTENT ===== */}
       <main className="flex-1 overflow-y-auto">
