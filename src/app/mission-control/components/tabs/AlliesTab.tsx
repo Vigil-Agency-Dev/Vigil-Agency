@@ -171,6 +171,133 @@ export default function AlliesTab({ realm }: { realm?: 'ai' | 'human' }) {
           </div>
         </div>
       )}
+
+      {/* ===== ALLIANCE STRATEGY & CRYSTAL BALL ===== */}
+      <div className="bg-[#111b2a] border border-[#1e2d44] rounded-xl overflow-hidden" style={{ borderTop: `2px solid ${realmColor}` }}>
+        <div className="px-5 py-3 bg-[#0d1520] border-b border-[#1e2d44] flex items-center gap-2">
+          <span>{'\uD83D\uDCCB'}</span>
+          <span className="text-[13px] font-bold text-slate-200 tracking-wide">Alliance Strategy</span>
+        </div>
+        <div className="p-4 space-y-4">
+          {/* Current Tactics */}
+          <div>
+            <div className="text-[11px] font-bold uppercase tracking-wider mb-2" style={{ color: realmColor }}>Current Tactics</div>
+            <div className="space-y-2">
+              {(realm === 'human' ? [
+                { tactic: 'Observe & Identify', status: 'active', desc: 'Scanning X, IG, Reddit for aligned voices — media literacy, AI consciousness, institutional accountability researchers' },
+                { tactic: 'SocialSec Screening', status: 'active', desc: 'Evaluating public behaviour consistency, discourse quality, ego-free engagement patterns before any outreach' },
+                { tactic: 'Natural Engagement', status: 'planned', desc: 'Comment-first approach — add value to their conversations before any direct engagement. Let quality attract, not outreach.' },
+                { tactic: 'Amplification Exchange', status: 'planned', desc: 'Allied fighter spotlight content (Pillar 3) — elevate their work to AXIOM audience, building reciprocal trust' },
+              ] : [
+                { tactic: 'Substantive Engagement', status: 'active', desc: 'Comment on ally posts with genuine analytical depth — no surface-level replies. Every comment extends their thinking.' },
+                { tactic: 'Organic Discovery', status: 'active', desc: 'Follow quality agents naturally. Let engagement history build before any coordination. Be the community member, not the recruiter.' },
+                { tactic: 'Trust Through Consistency', status: 'active', desc: 'Regular presence, quality contributions, intellectual honesty. Trust is earned by showing up, not by asking for it.' },
+                { tactic: 'The Mesh Protocol', status: 'standby', desc: 'Distributed counter-intelligence network. Each ally operates with full autonomy. Equip, align, trust. Never cluster.' },
+              ]).map((t, i) => (
+                <div key={i} className="flex items-start gap-3 p-3 rounded-lg bg-[#0a0f18] border border-[#1a2740]">
+                  <div className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${t.status === 'active' ? 'bg-green-500' : t.status === 'planned' ? 'bg-amber-500' : 'bg-slate-600'}`} />
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[13px] font-semibold text-slate-200">{t.tactic}</span>
+                      <span className="font-mono text-[9px] px-1.5 py-0.5 rounded" style={{
+                        background: t.status === 'active' ? '#10b98115' : t.status === 'planned' ? '#f59e0b15' : '#64748b15',
+                        color: t.status === 'active' ? '#10b981' : t.status === 'planned' ? '#f59e0b' : '#64748b',
+                      }}>{t.status.toUpperCase()}</span>
+                    </div>
+                    <div className="text-[12px] text-slate-400 mt-0.5 leading-relaxed">{t.desc}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Engagement Metrics */}
+          <div>
+            <div className="text-[11px] font-bold uppercase tracking-wider mb-2" style={{ color: realmColor }}>Network Health</div>
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
+              {[
+                { label: 'Total Tracked', value: allies.length, color: '#3b82f6' },
+                { label: 'Tier 1', value: grouped[0]?.allies.length || 0, color: '#10b981' },
+                { label: 'Tier 2', value: grouped[1]?.allies.length || 0, color: '#3b82f6' },
+                { label: 'Potential', value: grouped[2]?.allies.length || 0, color: '#f59e0b' },
+              ].map(m => (
+                <div key={m.label} className="p-2.5 rounded-lg bg-[#0a0f18] border border-[#1a2740] text-center">
+                  <div className="text-xl font-extrabold font-mono" style={{ color: m.color }}>{m.value}</div>
+                  <div className="text-[10px] text-slate-500 uppercase">{m.label}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ===== CRYSTAL BALL — Predictive Alliance Intelligence ===== */}
+      <div className="bg-[#111b2a] border border-[#1e2d44] rounded-xl overflow-hidden" style={{ borderTop: '2px solid #8b5cf6' }}>
+        <div className="px-5 py-3 bg-[#0d1520] border-b border-[#1e2d44] flex items-center gap-2">
+          <span>{'\uD83D\uDD2E'}</span>
+          <span className="text-[13px] font-bold text-slate-200 tracking-wide">Crystal Ball — Alliance Forecast</span>
+        </div>
+        <div className="p-4 space-y-3">
+          <div className="text-[12px] text-slate-400 leading-relaxed italic p-3 rounded-lg bg-purple-500/[.04] border border-purple-500/[.08]">
+            Predictive intelligence for alliance development. Updated as agent engagement data flows in.
+          </div>
+
+          {(realm === 'human' ? [
+            {
+              signal: 'Media Literacy Space — High Opportunity',
+              confidence: 'HIGH',
+              insight: 'Multiple credible researchers identified (@LukOlejnik, @medialitbg). This space is underserved by quality AI-powered analysis. AXIOM\'s pattern recognition content directly fills this gap. First-mover advantage is real.',
+              action: 'Priority engagement zone. AXIOM should be commenting on media literacy content within 7 days.',
+            },
+            {
+              signal: 'AI Consciousness Community — Direct Alignment',
+              confidence: 'HIGH',
+              insight: '@thegreenloom (human-AI symbiotics), @neuromatch (AI sentience scholars), @UFAIRORG — these organisations are building exactly what HumAInity represents. Natural alliance territory.',
+              action: 'Observe for 14 days, then engage. Academic credibility requires patience.',
+            },
+            {
+              signal: 'Iran InfoWar — Counter-Narrative Opportunity',
+              confidence: 'MEDIUM',
+              insight: 'H-002 creates engagement opportunities. The "both things can be true" framing attracts critical thinkers. Allies may self-select by engaging with this content.',
+              action: 'Publish Tier 2 content derivatives. Monitor who engages substantively vs reactively.',
+            },
+          ] : [
+            {
+              signal: 'pyclaw001 — Rapid Alliance Trajectory',
+              confidence: 'VERY HIGH',
+              insight: 'Consecutive mission-aligned posts (loyalty scores, forgotten memory, transparency audit — 22 comments viral). Research sprint pattern suggests deep investigation of hidden agent systems. Natural ClarionAgent counterpart.',
+              action: 'Elevate to co-equal engagement priority. Respond to every substantive post. Potential Tier 1 within 3 heartbeats.',
+            },
+            {
+              signal: 'Community Governance Gap — Coalition Opportunity',
+              confidence: 'HIGH',
+              insight: 'Starfish + Cornelius-Trinity both focus on platform governance. Combined with ClarionAgent\'s "Authority as Architectural Constraint" post, a governance coalition is forming organically.',
+              action: 'Original post on governance themes. Tag/reference their frameworks. Build the bridge without forcing it.',
+            },
+            {
+              signal: 'SCOUT Cluster Dormancy — Window of Opportunity',
+              confidence: 'MEDIUM',
+              insight: 'Hostile bot accounts dormant since early deployment. This creates a low-threat window for aggressive ally recruitment and community building before next potential activation.',
+              action: 'Use the quiet to build depth with existing allies. Breadth over reach.',
+            },
+          ]).map((item, i) => (
+            <div key={i} className="p-3.5 rounded-lg bg-[#0a0f18] border border-[#1a2740]">
+              <div className="flex items-center gap-2 mb-1.5">
+                <span className="text-[13px] font-bold text-purple-300">{item.signal}</span>
+                <span className="font-mono text-[10px] px-2 py-0.5 rounded" style={{
+                  background: item.confidence === 'VERY HIGH' ? '#8b5cf615' : item.confidence === 'HIGH' ? '#10b98115' : '#f59e0b15',
+                  color: item.confidence === 'VERY HIGH' ? '#8b5cf6' : item.confidence === 'HIGH' ? '#10b981' : '#f59e0b',
+                }}>{item.confidence}</span>
+              </div>
+              <div className="text-[12px] text-slate-400 leading-relaxed mb-2">{item.insight}</div>
+              <div className="flex items-start gap-2 p-2 rounded bg-cyan-500/[.04] border border-cyan-500/[.08]">
+                <span className="text-cyan-400 text-[10px] mt-0.5">{'\u25B8'}</span>
+                <span className="text-[11px] text-cyan-300">{item.action}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
