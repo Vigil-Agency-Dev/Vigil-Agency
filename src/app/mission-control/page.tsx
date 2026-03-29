@@ -81,7 +81,20 @@ class ErrorBoundary extends React.Component<{ children: React.ReactNode; fallbac
 
 function Dashboard() {
   const { user, profile, loading, logout, isAdmin } = useAuth();
-  const [tab, setTab] = useState('overview');
+  const [tab, setTab] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const hash = window.location.hash.slice(1);
+      if (hash) return hash;
+    }
+    return 'overview';
+  });
+
+  // Persist tab in URL hash
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      window.location.hash = tab;
+    }
+  }, [tab]);
   const [showAdmin, setShowAdmin] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
