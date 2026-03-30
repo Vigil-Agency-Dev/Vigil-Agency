@@ -153,20 +153,24 @@ export default function HeraldTab() {
           </div>
         ) : (
           <div className="divide-y divide-[#1a2740]">
-            {contacts.map((c, i) => {
-              const name = c.filename.replace('REG-', '').replace('.md', '').replace(/^\d+-/, '');
+            {contacts.map((c: any, i: number) => {
+              const trustColor = c.trustLevel?.includes('L3') || c.trustLevel?.includes('L4') || c.trustLevel?.includes('L5') ? '#10b981' : c.trustLevel?.includes('L2') ? '#3b82f6' : c.trustLevel?.includes('L1') ? '#f59e0b' : '#64748b';
               return (
-                <div key={i} className="px-5 py-3 hover:bg-[#131f30] transition-colors cursor-pointer" onClick={() => setExpanded(expanded === c.filename ? null : c.filename)}>
+                <div key={i} className="px-5 py-3 hover:bg-[#131f30] transition-colors cursor-pointer" onClick={() => setExpanded(expanded === c.id ? null : c.id)}>
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <span className="text-[13px] font-semibold text-slate-200">{name}</span>
-                      <span className="font-mono text-[10px] text-slate-500">{c.filename}</span>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-mono text-[10px] text-slate-600">{c.id}</span>
+                      <span className="text-[13px] font-semibold text-slate-200">{c.name}</span>
+                      <span className="font-mono text-[10px] px-1.5 py-0.5 rounded" style={{ background: `${trustColor}15`, color: trustColor }}>{c.trustLevel}</span>
+                      <span className="font-mono text-[9px] text-slate-500">{c.type}</span>
+                      {c.opRelevance && <span className="font-mono text-[9px] text-cyan-400">{c.opRelevance}</span>}
                     </div>
-                    <span className="text-slate-500 text-xs">{expanded === c.filename ? '\u25BE' : '\u25B8'}</span>
+                    <span className="text-slate-500 text-xs">{expanded === c.id ? '\u25BE' : '\u25B8'}</span>
                   </div>
-                  {expanded === c.filename && (
+                  {c.expertise && <div className="text-[11px] text-slate-500 mt-0.5">{c.expertise}</div>}
+                  {expanded === c.id && c.profile && (
                     <div className="mt-2 text-[11px] text-slate-400 leading-relaxed p-3 rounded-lg bg-[#0a0f18] border border-[#1a2740] whitespace-pre-wrap max-h-[300px] overflow-y-auto" style={{ scrollbarWidth: 'thin' }}>
-                      {c.content || 'No detail available'}
+                      {c.profile}
                     </div>
                   )}
                 </div>
