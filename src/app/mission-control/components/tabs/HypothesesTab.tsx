@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Dot } from '../ui';
+import { useOperation } from '../../lib/operation-context';
 
 const VPS_API = process.env.NEXT_PUBLIC_VPS_ENDPOINT || 'https://ops.jr8ch.com';
 const API_KEY = process.env.NEXT_PUBLIC_VIGIL_API_KEY || '';
@@ -62,7 +63,20 @@ function renderMarkdownBlock(raw: string) {
   });
 }
 
+// Map hypothesis IDs to operations
+function getHypothesisOp(id: string): string {
+  if (id.startsWith('H-SC')) return 'op-003';
+  return 'op-001'; // H-001 to H-004 are Lumen/Epstein
+}
+
+// Extract revision number from raw content
+function getRevision(raw: string): string {
+  const match = raw?.match(/\bRev\.?\s*([\d.]+)/i) || raw?.match(/\brevision[:\s]*([\d.]+)/i);
+  return match ? match[1] : '1.0';
+}
+
 export default function HypothesesTab() {
+  const op = useOperation();
   const [hypotheses, setHypotheses] = useState<Hypothesis[]>([]);
   const [isLive, setIsLive] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -91,6 +105,30 @@ export default function HypothesesTab() {
 
   if (loading) return <div className="text-center py-16 text-slate-500 text-sm">Loading hypotheses...</div>;
 
+  // Filter by current operation
+  const filtered = hypotheses.filter(h => {
+    if (op.id === 'op-003') return h.id.startsWith('H-SC');
+    if (op.id === 'op-002') return !h.id.startsWith('H-SC'); // Lumen + Epstein share
+    return !h.id.startsWith('H-SC'); // Default: Lumen
+  });
+
+  // Group by base ID (strip version suffix) and sort by revision
+  const grouped = filtered.reduce<Record<string, Hypothesis[]>>((acc, h) => {
+    const baseId = h.id.replace(/-v[\d.]+$/, '');
+    if (!acc[baseId]) acc[baseId] = [];
+    acc[baseId].push(h);
+    return acc;
+  }, {});
+
+  // Sort each group by revision (latest first)
+  Object.values(grouped).forEach(group => {
+    group.sort((a, b) => {
+      const revA = parseFloat(getRevision(a.raw || ''));
+      const revB = parseFloat(getRevision(b.raw || ''));
+      return revB - revA;
+    });
+  });
+
   return (
     <div className="flex flex-col gap-5">
       <div className="flex items-center gap-2 px-1">
@@ -103,15 +141,18 @@ export default function HypothesesTab() {
       <div className="p-5 bg-gradient-to-r from-blue-500/[.08] to-purple-500/[.04] border border-blue-500/20 rounded-xl">
         <div className="flex items-center gap-3 mb-2">
           <span className="text-xl">{'\uD83E\uDDE0'}</span>
-          <h2 className="text-base font-bold text-blue-400" style={{ fontFamily: "'JetBrains Mono', monospace" }}>HYPOTHESES REGISTER</h2>
+          <h2 className="text-base font-bold text-blue-400" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+            HYPOTHESES — {op.codename}
+          </h2>
         </div>
-        <p className="text-[14px] text-slate-300 leading-relaxed">
-          Formal investigative hypotheses from VIGIL OSINT operations.
-          Pulled live from VPS dead-drop. New hypotheses appear automatically when MERIDIAN files them.
+        <p className="text-[13px] text-slate-300 leading-relaxed">
+          {filtered.length} hypotheses for {op.codename}. Revisions tracked automatically — latest version shown, expand to view history.
         </p>
       </div>
 
-      {hypotheses.map(h => {
+      {Object.entries(grouped).map(([baseId, versions]) => {
+        const h = versions[0]; // Latest version
+        const hasRevisions = versions.length > 1 || parseFloat(getRevision(h.raw || '')) > 1;
         const isExpanded = expanded === h.id;
         const isRawVisible = showRaw === h.id;
         const color = statusColor(h.status);
@@ -129,6 +170,11 @@ export default function HypothesesTab() {
                   <span className="font-mono text-[10px] px-2.5 py-0.5 rounded-full font-bold" style={{ background: `${color}15`, color, border: `1px solid ${color}30` }}>
                     {h.status}
                   </span>
+                  {hasRevisions && (
+                    <span className="font-mono text-[9px] px-2 py-0.5 rounded bg-purple-500/10 text-purple-400">
+                      v{getRevision(h.raw || '')} {versions.length > 1 ? `(${versions.length} revisions)` : ''}
+                    </span>
+                  )}
                 </div>
                 <div className="flex items-center gap-3 text-[12px] text-slate-500">
                   <span>Analyst: <span className="text-purple-400 font-semibold">{h.analyst}</span></span>
@@ -186,9 +232,9 @@ export default function HypothesesTab() {
         );
       })}
 
-      {hypotheses.length === 0 && (
+      {filtered.length === 0 && (
         <div className="p-4 rounded-xl bg-[#111b2a] border border-dashed border-[#2a3550] text-center">
-          <div className="text-[13px] text-slate-500">No hypotheses available. Check VPS connection.</div>
+          <div className="text-[13px] text-slate-500">No hypotheses for {op.codename}. {hypotheses.length > 0 ? 'Switch operation to view others.' : 'Check VPS connection.'}</div>
         </div>
       )}
     </div>
