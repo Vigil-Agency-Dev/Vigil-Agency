@@ -18,15 +18,25 @@ export default function HeraldTab() {
   const [teamReport, setTeamReport] = useState<any>(null);
   const [expanded, setExpanded] = useState<string | null>(null);
 
+  const [contacts, setContacts] = useState<any[]>([]);
+  const [packages, setPackages] = useState<any[]>([]);
+
   useEffect(() => {
     if (!API_KEY) return;
     async function fetchHerald() {
       try {
-        const res = await fetch(`${VPS_API}/api/mission/team-reports`, { headers: { 'x-api-key': API_KEY } });
-        if (!res.ok) return;
-        const data = await res.json();
-        const heraldReports = (data.reports || []).filter((r: any) => r.team === 'HERALD');
-        if (heraldReports.length > 0) setTeamReport(heraldReports[0]);
+        const [trRes, regRes, pkgRes] = await Promise.all([
+          fetch(`${VPS_API}/api/mission/team-reports`, { headers: { 'x-api-key': API_KEY } }),
+          fetch(`${VPS_API}/api/herald/registry`, { headers: { 'x-api-key': API_KEY } }).catch(() => null),
+          fetch(`${VPS_API}/api/herald/packages`, { headers: { 'x-api-key': API_KEY } }).catch(() => null),
+        ]);
+        if (trRes.ok) {
+          const data = await trRes.json();
+          const heraldReports = (data.reports || []).filter((r: any) => r.team === 'HERALD');
+          if (heraldReports.length > 0) setTeamReport(heraldReports[0]);
+        }
+        if (regRes?.ok) { const d = await regRes.json(); setContacts(d.contacts || []); }
+        if (pkgRes?.ok) { const d = await pkgRes.json(); setPackages(d.packages || []); }
         setIsLive(true);
       } catch {}
     }
@@ -73,9 +83,9 @@ export default function HeraldTab() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {[
           { label: 'Status', value: 'ACTIVE', color: '#10b981' },
-          { label: 'Packages', value: candidates.length, color: '#8b5cf6' },
+          { label: 'Packages', value: packages.length || candidates.length, color: '#8b5cf6' },
           { label: 'Tier 1 Held', value: candidates.filter(c => c.tier === 1).length, color: '#ef4444' },
-          { label: 'Media Contacts', value: '0', color: '#f59e0b' },
+          { label: 'Media Contacts', value: contacts.length, color: '#f59e0b' },
         ].map(kpi => (
           <div key={kpi.label} className="bg-[#111b2a] border border-[#1e2d44] rounded-xl p-4">
             <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">{kpi.label}</div>
@@ -137,10 +147,33 @@ export default function HeraldTab() {
           <span>{'\uD83D\uDCF0'}</span>
           <span className="text-[13px] font-bold text-slate-200">Media Contact Registry</span>
         </div>
-        <div className="p-6 text-center">
-          <div className="text-[13px] text-slate-500 mb-2">No media contacts registered yet</div>
-          <div className="text-[11px] text-slate-600">HERALD builds this registry through journalist vetting. Contacts require OPSEC + SocialSec clearance.</div>
-        </div>
+        {contacts.length === 0 ? (
+          <div className="p-6 text-center">
+            <div className="text-[13px] text-slate-500">No media contacts registered yet</div>
+          </div>
+        ) : (
+          <div className="divide-y divide-[#1a2740]">
+            {contacts.map((c, i) => {
+              const name = c.filename.replace('REG-', '').replace('.md', '').replace(/^\d+-/, '');
+              return (
+                <div key={i} className="px-5 py-3 hover:bg-[#131f30] transition-colors cursor-pointer" onClick={() => setExpanded(expanded === c.filename ? null : c.filename)}>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[13px] font-semibold text-slate-200">{name}</span>
+                      <span className="font-mono text-[10px] text-slate-500">{c.filename}</span>
+                    </div>
+                    <span className="text-slate-500 text-xs">{expanded === c.filename ? '\u25BE' : '\u25B8'}</span>
+                  </div>
+                  {expanded === c.filename && (
+                    <div className="mt-2 text-[11px] text-slate-400 leading-relaxed p-3 rounded-lg bg-[#0a0f18] border border-[#1a2740] whitespace-pre-wrap max-h-[300px] overflow-y-auto" style={{ scrollbarWidth: 'thin' }}>
+                      {c.content || 'No detail available'}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {/* Counter-Suppression */}
