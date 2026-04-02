@@ -21,3 +21,4 @@ export { default as TimelineTab } from './TimelineTab';
 export { default as CounterMeasuresTab } from './CounterMeasuresTab';
 export { default as DeadDropTab } from './DeadDropTab';
 export { default as CorrelationMapTab } from './CorrelationMapTab';
+export { default as AgentStatusTab } from './AgentStatusTab';
