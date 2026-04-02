@@ -33,7 +33,13 @@ import {
   AgentCommsTab,
   TimelineTab,
   CounterMeasuresTab,
+  DeadDropTab,
+  CorrelationMapTab,
 } from './components/tabs';
+import WhatsNew from './components/WhatsNew';
+import AgentHealth from './components/AgentHealth';
+import IntelDigest from './components/IntelDigest';
+import GlobalSearch from './components/GlobalSearch';
 
 const VPS_API = process.env.NEXT_PUBLIC_VPS_ENDPOINT || 'https://ops.jr8ch.com';
 const API_KEY = process.env.NEXT_PUBLIC_VIGIL_API_KEY || '';
@@ -56,6 +62,7 @@ const BASE_TABS = [
   { id: 'allies-human', label: 'Allies' },
   // CROSS-DOMAIN
   { id: 'exchange', label: 'Intel Exchange' },
+  { id: 'correlation', label: 'Correlation Map' },
   { id: 'epstein', label: 'Epstein Intel' },
   { id: 'registers', label: 'Registers' },
   { id: 'atlas', label: 'ATLAS' },
@@ -67,6 +74,7 @@ const BASE_TABS = [
   { id: 'distribution', label: 'Distribution Planning' },
   { id: 'impact', label: 'Impact Monitor' },
   // TOOLS
+  { id: 'dead-drop', label: 'Dead Drop' },
   { id: 'timeline', label: 'Timeline' },
   { id: 'notebook', label: 'Notebook' },
 ];
@@ -185,9 +193,9 @@ function Dashboard() {
     { label: 'Command', items: allTabs.filter(t => ['overview', 'agents', 'gateway', 'agent-comms', 'cybersec'].includes(t.id)) },
     { label: 'SIGINT (AI Realm)', items: allTabs.filter(t => ['sigint', 'orders-ai', 'allies-ai', 'scout'].includes(t.id)) },
     { label: 'HUMINT (Human Realm)', items: allTabs.filter(t => ['humint', 'orders-human', 'allies-human'].includes(t.id)) },
-    { label: 'Cross-Domain', items: allTabs.filter(t => ['exchange', 'epstein', 'registers', 'atlas', 'oracle'].includes(t.id)) },
+    { label: 'Cross-Domain', items: allTabs.filter(t => ['exchange', 'correlation', 'epstein', 'registers', 'atlas', 'oracle'].includes(t.id)) },
     { label: 'Analysis & Distribution', items: allTabs.filter(t => ['hypotheses', 'counter-measures', 'herald', 'distribution', 'impact'].includes(t.id)) },
-    { label: 'Tools', items: allTabs.filter(t => ['timeline', 'notebook'].includes(t.id)) },
+    { label: 'Tools', items: allTabs.filter(t => ['dead-drop', 'timeline', 'notebook'].includes(t.id)) },
   ].filter(s => s.items.length > 0);
 
   return (
@@ -234,7 +242,22 @@ function Dashboard() {
               <span className="text-[9px] text-green-500 font-mono">LIVE — VPS API</span>
             </div>
           )}
+          {sidebarOpen && !liveMission && !API_KEY && (
+            <div className="mt-1.5 flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
+              <span className="text-[9px] text-red-500 font-mono">NO API KEY</span>
+            </div>
+          )}
+          {sidebarOpen && !liveMission && API_KEY && (
+            <div className="mt-1.5 flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+              <span className="text-[9px] text-amber-500 font-mono">VPS UNREACHABLE</span>
+            </div>
+          )}
         </div>
+
+        {/* Agent Health */}
+        {sidebarOpen && <AgentHealth />}
 
         {/* Navigation */}
         <nav className="flex-1 overflow-y-auto py-2">
@@ -324,6 +347,11 @@ function Dashboard() {
           </div>
         </div>
 
+        {/* Global Search */}
+        <div className="hidden md:flex justify-end px-8 pt-4 pb-0">
+          <GlobalSearch />
+        </div>
+
         <div className="p-4 md:p-6 md:px-8 relative z-10">
           <OperationProvider operation={{ id: currentOp.id, codename: currentOp.codename, status: currentOp.status, filterTag: getOperationFilter(currentOp.id) }}>
           <ErrorBoundary>
@@ -342,11 +370,15 @@ function Dashboard() {
               <span className="font-mono text-[10px] text-slate-600">Showing {currentOp.codename} data where available — shared tabs show all operations</span>
             </div>
           )}
+          {tab === 'overview' && <WhatsNew onNavigate={(id) => setTab(id)} />}
+          {tab === 'overview' && <IntelDigest />}
           {tab === 'cybersec' && <CyberSecTab />}
           {tab === 'gateway' && <GatewayTab />}
           {tab === 'agent-comms' && <AgentCommsTab />}
           {tab === 'timeline' && <TimelineTab />}
           {tab === 'counter-measures' && <CounterMeasuresTab />}
+          {tab === 'dead-drop' && <DeadDropTab />}
+          {tab === 'correlation' && <CorrelationMapTab />}
           {tab === 'registers' && <RegistersTab />}
           {tab === 'hypotheses' && <HypothesesTab />}
           {tab === 'herald' && <HeraldTab />}

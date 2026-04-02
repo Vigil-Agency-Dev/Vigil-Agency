@@ -19,3 +19,5 @@ export { default as GatewayTab } from './GatewayTab';
 export { default as AgentCommsTab } from './AgentCommsTab';
 export { default as TimelineTab } from './TimelineTab';
 export { default as CounterMeasuresTab } from './CounterMeasuresTab';
+export { default as DeadDropTab } from './DeadDropTab';
+export { default as CorrelationMapTab } from './CorrelationMapTab';
