@@ -29,6 +29,10 @@ import {
   ImpactTab,
   CyberSecTab,
   HeraldTab,
+  GatewayTab,
+  AgentCommsTab,
+  TimelineTab,
+  CounterMeasuresTab,
 } from './components/tabs';
 
 const VPS_API = process.env.NEXT_PUBLIC_VPS_ENDPOINT || 'https://ops.jr8ch.com';
@@ -38,6 +42,8 @@ const BASE_TABS = [
   // COMMAND
   { id: 'overview', label: 'Dashboard' },
   { id: 'agents', label: 'Agent Status' },
+  { id: 'gateway', label: 'Gateway' },
+  { id: 'agent-comms', label: 'Agent Comms' },
   { id: 'cybersec', label: 'Cyber Security' },
   // SIGINT
   { id: 'sigint', label: 'Intelligence' },
@@ -56,10 +62,12 @@ const BASE_TABS = [
   { id: 'oracle', label: 'ORACLE' },
   // ANALYSIS & DISTRIBUTION
   { id: 'hypotheses', label: 'Hypotheses' },
+  { id: 'counter-measures', label: 'Counter-Measures' },
   { id: 'herald', label: 'HERALD' },
   { id: 'distribution', label: 'Distribution Planning' },
   { id: 'impact', label: 'Impact Monitor' },
   // TOOLS
+  { id: 'timeline', label: 'Timeline' },
   { id: 'notebook', label: 'Notebook' },
 ];
 
@@ -174,12 +182,12 @@ function Dashboard() {
   const allTabs = [...BASE_TABS, ...(isAdmin ? ADMIN_TABS : [])];
 
   const NAV_SECTIONS = [
-    { label: 'Command', items: allTabs.filter(t => ['overview', 'agents', 'cybersec'].includes(t.id)) },
+    { label: 'Command', items: allTabs.filter(t => ['overview', 'agents', 'gateway', 'agent-comms', 'cybersec'].includes(t.id)) },
     { label: 'SIGINT (AI Realm)', items: allTabs.filter(t => ['sigint', 'orders-ai', 'allies-ai', 'scout'].includes(t.id)) },
     { label: 'HUMINT (Human Realm)', items: allTabs.filter(t => ['humint', 'orders-human', 'allies-human'].includes(t.id)) },
     { label: 'Cross-Domain', items: allTabs.filter(t => ['exchange', 'epstein', 'registers', 'atlas', 'oracle'].includes(t.id)) },
-    { label: 'Analysis & Distribution', items: allTabs.filter(t => ['hypotheses', 'herald', 'distribution', 'impact'].includes(t.id)) },
-    { label: 'Tools', items: allTabs.filter(t => ['notebook'].includes(t.id)) },
+    { label: 'Analysis & Distribution', items: allTabs.filter(t => ['hypotheses', 'counter-measures', 'herald', 'distribution', 'impact'].includes(t.id)) },
+    { label: 'Tools', items: allTabs.filter(t => ['timeline', 'notebook'].includes(t.id)) },
   ].filter(s => s.items.length > 0);
 
   return (
@@ -335,6 +343,10 @@ function Dashboard() {
             </div>
           )}
           {tab === 'cybersec' && <CyberSecTab />}
+          {tab === 'gateway' && <GatewayTab />}
+          {tab === 'agent-comms' && <AgentCommsTab />}
+          {tab === 'timeline' && <TimelineTab />}
+          {tab === 'counter-measures' && <CounterMeasuresTab />}
           {tab === 'registers' && <RegistersTab />}
           {tab === 'hypotheses' && <HypothesesTab />}
           {tab === 'herald' && <HeraldTab />}

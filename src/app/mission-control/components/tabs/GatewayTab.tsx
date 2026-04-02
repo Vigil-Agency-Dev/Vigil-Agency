@@ -4,6 +4,9 @@ import React, { useState, useEffect, useRef } from 'react';
 import { VPS_CONFIG } from '../../lib/mission-data';
 import { Dot } from '../ui';
 
+const VPS_API = process.env.NEXT_PUBLIC_VPS_ENDPOINT || 'https://ops.jr8ch.com';
+const API_KEY = process.env.NEXT_PUBLIC_VIGIL_API_KEY || '';
+
 type LogLevel = 'INFO' | 'OK' | 'WARN' | 'ERROR';
 
 interface LogEntry {
@@ -17,6 +20,13 @@ const LEVEL_COLORS: Record<LogLevel, string> = {
   OK: '#10b981',
   WARN: '#f59e0b',
   ERROR: '#ef4444',
+};
+
+const SEVERITY_TO_LEVEL: Record<string, LogLevel> = {
+  info: 'INFO',
+  success: 'OK',
+  warning: 'WARN',
+  error: 'ERROR',
 };
 
 const MOCK_LOGS: LogEntry[] = [
@@ -43,30 +53,56 @@ const MOCK_LOGS: LogEntry[] = [
 export default function GatewayTab() {
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [paused, setPaused] = useState(false);
-  const [connected] = useState(!VPS_CONFIG.placeholder);
+  const [connected, setConnected] = useState(false);
+  const [lastUpdated, setLastUpdated] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const wsRef = useRef<WebSocket | null>(null);
+  const reconnectRef = useRef<ReturnType<typeof setTimeout>>();
   const startTime = useRef(Date.now());
 
-  // Simulate log streaming with mock data
+  // WebSocket connection to live gateway logs
   useEffect(() => {
-    if (!VPS_CONFIG.placeholder) return;
+    if (!API_KEY) {
+      // No API key — show static mock data immediately
+      setLogs(MOCK_LOGS);
+      return;
+    }
 
-    let idx = 0;
-    const interval = setInterval(() => {
-      if (idx < MOCK_LOGS.length) {
-        setLogs(prev => [...prev, MOCK_LOGS[idx]]);
-        idx++;
-      } else {
-        // Loop with fresh timestamps
-        const now = new Date();
-        const ts = now.toISOString().replace('T', ' ').substring(0, 19);
-        const entry = { ...MOCK_LOGS[idx % MOCK_LOGS.length], timestamp: ts };
-        setLogs(prev => [...prev.slice(-200), entry]);
-        idx++;
-      }
-    }, 800);
+    function connect() {
+      const ws = new WebSocket(`${VPS_CONFIG.wsEndpoint}/gateway-logs?key=${API_KEY}`);
 
-    return () => clearInterval(interval);
+      ws.onopen = () => {
+        setConnected(true);
+        setLastUpdated(new Date().toISOString());
+      };
+
+      ws.onmessage = (ev) => {
+        try {
+          const msg = JSON.parse(ev.data);
+          const entry: LogEntry = {
+            timestamp: msg.timestamp ? new Date(msg.timestamp).toISOString().replace('T', ' ').slice(0, 19) : new Date().toISOString().replace('T', ' ').slice(0, 19),
+            level: SEVERITY_TO_LEVEL[msg.severity] || msg.level || 'INFO',
+            message: msg.line || msg.message || msg.summary || JSON.stringify(msg),
+          };
+          setLogs(prev => [...prev.slice(-500), entry]);
+          setLastUpdated(new Date().toISOString());
+        } catch { /* skip unparseable */ }
+      };
+
+      ws.onclose = () => {
+        setConnected(false);
+        reconnectRef.current = setTimeout(connect, 5000);
+      };
+
+      ws.onerror = () => ws.close();
+      wsRef.current = ws;
+    }
+
+    connect();
+    return () => {
+      wsRef.current?.close();
+      clearTimeout(reconnectRef.current);
+    };
   }, []);
 
   // Auto-scroll
@@ -92,22 +128,44 @@ export default function GatewayTab() {
 
   const lastHB = logs.filter(l => l.message.includes('Heartbeat')).pop();
 
+  async function gatewayAction(action: string) {
+    if (!API_KEY) return;
+    try {
+      await fetch(`${VPS_API}/api/gateway/${action}`, {
+        method: 'POST',
+        headers: { 'x-api-key': API_KEY },
+      });
+    } catch { /* silent */ }
+  }
+
+  const timeAgo = (iso: string) => {
+    const diff = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
+    if (diff < 60) return `${diff}s ago`;
+    if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+    return `${Math.floor(diff / 3600)}h ago`;
+  };
+
   return (
     <div className="flex flex-col gap-4 animate-fadeIn">
+      {/* Status */}
+      <div className="flex items-center gap-2 px-1">
+        <Dot color={connected ? '#10b981' : !API_KEY ? '#f59e0b' : '#ef4444'} pulse={connected} />
+        <span className="font-mono text-[10px] tracking-wider" style={{ color: connected ? '#10b981' : !API_KEY ? '#f59e0b' : '#ef4444' }}>
+          {connected ? 'LIVE — WEBSOCKET' : !API_KEY ? 'STATIC — NO API KEY' : 'DISCONNECTED — RECONNECTING...'}
+        </span>
+        {lastUpdated && <span className="font-mono text-[9px] text-slate-600 ml-2">Updated {timeAgo(lastUpdated)}</span>}
+      </div>
+
       {/* Header Bar */}
       <div className="flex items-center justify-between p-4 rounded-xl bg-[#0a0e17] border border-[#2a3550]">
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2">
-            <Dot color={VPS_CONFIG.placeholder ? '#f59e0b' : connected ? '#10b981' : '#ef4444'} pulse={VPS_CONFIG.placeholder || connected} />
-            <span
-              className="text-[13px] font-bold tracking-[.15em] text-cyan-400"
-              style={{ fontFamily: "'JetBrains Mono', monospace" }}
-            >
+            <Dot color={connected ? '#10b981' : '#ef4444'} pulse={connected} />
+            <span className="text-[13px] font-bold tracking-[.15em] text-cyan-400" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
               OPENCLAW GATEWAY
             </span>
-            {VPS_CONFIG.placeholder && (
-              <span className="text-[9px] font-mono text-yellow-500/60 bg-yellow-500/10 px-1.5 py-0.5 rounded">MOCK</span>
-            )}
+            {connected && <span className="text-[9px] font-mono text-green-500/60 bg-green-500/10 px-1.5 py-0.5 rounded">LIVE</span>}
+            {!API_KEY && <span className="text-[9px] font-mono text-yellow-500/60 bg-yellow-500/10 px-1.5 py-0.5 rounded">STATIC</span>}
           </div>
           <div className="border-l border-[#2a3550] pl-4 flex items-center gap-4">
             <div>
@@ -120,17 +178,25 @@ export default function GatewayTab() {
                 {lastHB ? lastHB.timestamp.split(' ')[1] || lastHB.timestamp : '\u2014'}
               </div>
             </div>
+            <div>
+              <div className="text-[9px] text-slate-500 uppercase tracking-wider">Log Entries</div>
+              <div className="text-[11px] font-mono text-slate-300">{logs.length}</div>
+            </div>
           </div>
         </div>
         <div className="flex items-center gap-2">
-          {['Start Gateway', 'Stop Gateway', 'Restart Gateway'].map(label => (
+          {(['start', 'stop', 'restart'] as const).map(action => (
             <button
-              key={label}
-              disabled
-              title="Requires VPS connection"
-              className="px-3 py-1.5 text-[10px] font-mono text-slate-500 bg-[#111827] border border-[#2a3550] rounded-md cursor-not-allowed opacity-50"
+              key={action}
+              onClick={() => gatewayAction(action)}
+              disabled={!connected}
+              className={`px-3 py-1.5 text-[10px] font-mono border border-[#2a3550] rounded-md transition-all ${
+                connected
+                  ? 'text-slate-300 bg-[#111827] hover:bg-cyan-500/10 hover:text-cyan-400 hover:border-cyan-500/30 cursor-pointer'
+                  : 'text-slate-500 bg-[#111827] cursor-not-allowed opacity-50'
+              }`}
             >
-              {label.toUpperCase()}
+              {action.toUpperCase()} GATEWAY
             </button>
           ))}
         </div>
@@ -138,7 +204,6 @@ export default function GatewayTab() {
 
       {/* Terminal */}
       <div className="rounded-xl border border-[#2a3550] overflow-hidden">
-        {/* Terminal Header */}
         <div className="flex items-center justify-between px-4 py-2 bg-[#111827] border-b border-[#2a3550]">
           <div className="flex items-center gap-2">
             <div className="flex gap-1.5">
@@ -148,19 +213,26 @@ export default function GatewayTab() {
             </div>
             <span className="text-[10px] text-slate-500 font-mono ml-2">gateway.log</span>
           </div>
-          <button
-            onClick={() => setPaused(!paused)}
-            className={`text-[10px] font-mono px-2 py-1 rounded transition-all ${
-              paused
-                ? 'text-yellow-400 bg-yellow-500/10 border border-yellow-500/20'
-                : 'text-slate-500 hover:text-slate-300'
-            }`}
-          >
-            {paused ? 'SCROLL PAUSED' : 'PAUSE SCROLL'}
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setLogs([])}
+              className="text-[10px] font-mono text-slate-500 hover:text-slate-300 px-2 py-1"
+            >
+              CLEAR
+            </button>
+            <button
+              onClick={() => setPaused(!paused)}
+              className={`text-[10px] font-mono px-2 py-1 rounded transition-all ${
+                paused
+                  ? 'text-yellow-400 bg-yellow-500/10 border border-yellow-500/20'
+                  : 'text-slate-500 hover:text-slate-300'
+              }`}
+            >
+              {paused ? 'SCROLL PAUSED' : 'PAUSE SCROLL'}
+            </button>
+          </div>
         </div>
 
-        {/* Log Output */}
         <div
           ref={scrollRef}
           className="h-[500px] overflow-y-auto p-4 bg-[#0a0e17]"
@@ -172,17 +244,13 @@ export default function GatewayTab() {
             logs.map((entry, i) => (
               <div key={i} className="flex gap-2 text-[11px] leading-6 hover:bg-white/[.02] px-1 -mx-1 rounded">
                 <span className="text-slate-600 flex-shrink-0">[{entry.timestamp}]</span>
-                <span
-                  className="flex-shrink-0 font-semibold"
-                  style={{ color: LEVEL_COLORS[entry.level], minWidth: '3.5rem' }}
-                >
+                <span className="flex-shrink-0 font-semibold" style={{ color: LEVEL_COLORS[entry.level], minWidth: '3.5rem' }}>
                   [{entry.level}]
                 </span>
                 <span className="text-slate-300">{entry.message}</span>
               </div>
             ))
           )}
-          {/* Blinking cursor */}
           <div className="flex items-center gap-1 mt-1">
             <span className="text-slate-600 text-[11px]">{'>'}</span>
             <div className="w-2 h-4 bg-cyan-400/70 animate-pulse" />

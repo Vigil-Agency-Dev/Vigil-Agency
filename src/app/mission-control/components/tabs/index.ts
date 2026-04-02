@@ -15,3 +15,7 @@ export { default as DistributionTab } from './DistributionTab';
 export { default as ImpactTab } from './ImpactTab';
 export { default as HeraldTab } from './HeraldTab';
 export { default as CyberSecTab } from './CyberSecTab';
+export { default as GatewayTab } from './GatewayTab';
+export { default as AgentCommsTab } from './AgentCommsTab';
+export { default as TimelineTab } from './TimelineTab';
+export { default as CounterMeasuresTab } from './CounterMeasuresTab';

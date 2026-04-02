@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Dot } from '../ui';
+import { formatAESTShort } from '../../lib/date-utils';
 
 const VPS_API = process.env.NEXT_PUBLIC_VPS_ENDPOINT || 'https://ops.jr8ch.com';
 const API_KEY = process.env.NEXT_PUBLIC_VIGIL_API_KEY || '';
@@ -24,49 +25,142 @@ function statusColor(s: string) {
   return '#3b82f6';
 }
 
-export default function ImpactTab() {
-  const [items, setItems] = useState<DistributedItem[]>([]);
-  const [expanded, setExpanded] = useState<string | null>(null);
+const PLACEHOLDER_ITEMS: DistributedItem[] = [
+  {
+    id: 'DIST-001',
+    title: 'AXIOM Content Drop #1 — 5 posts deployed to X',
+    tier: 3,
+    channel: 'X (@VigilAgencyOps)',
+    distributedAt: '2026-03-29',
+    status: 'monitoring',
+    impactScore: 0,
+    notes: 'Initial content deployment. Account under X graduated access throttle. Engagement expected to build over 14-day window.',
+  },
+  {
+    id: 'DIST-002',
+    title: 'H-001 Weaponised Architecture Thesis — Held for Tier 1 placement',
+    tier: 1,
+    channel: 'Pending journalist vetting',
+    distributedAt: '',
+    status: 'monitoring',
+    impactScore: 0,
+    notes: 'Tier 1 intel. Requires DIRECTOR + COMMANDER authorization and vetted journalist channel before distribution.',
+  },
+  {
+    id: 'DIST-003',
+    title: 'H-002 Iran InfoWar Hypothesis — Tier 2 content derivatives',
+    tier: 2,
+    channel: 'AXIOM (content brief issued)',
+    distributedAt: '2026-03-29',
+    status: 'monitoring',
+    impactScore: 0,
+    notes: 'Sanitised derivatives of H-002 being woven into AXIOM pattern recognition content.',
+  },
+];
 
-  // Placeholder — will pull from VPS when distribution tracking is live
-  const placeholderItems: DistributedItem[] = [
-    {
-      id: 'DIST-001',
-      title: 'AXIOM Content Drop #1 — 5 posts deployed to X',
-      tier: 3,
-      channel: 'X (@VigilAgencyOps)',
-      distributedAt: '2026-03-29',
-      status: 'monitoring',
-      impactScore: 0,
-      notes: 'Initial content deployment. Account under X graduated access throttle. Engagement expected to build over 14-day window. Monitoring for: discovery rate, engagement quality, follower growth trajectory.',
-    },
-    {
-      id: 'DIST-002',
-      title: 'H-001 Weaponised Architecture Thesis — Held for Tier 1 placement',
-      tier: 1,
-      channel: 'Pending journalist vetting',
-      distributedAt: '',
-      status: 'monitoring',
-      impactScore: 0,
-      notes: 'Tier 1 intel. Requires DIRECTOR + COMMANDER authorization and vetted journalist channel before distribution. Evidence compilation complete. Distribution plan pending.',
-    },
-    {
-      id: 'DIST-003',
-      title: 'H-002 Iran InfoWar Hypothesis — Tier 2 content derivatives',
-      tier: 2,
-      channel: 'AXIOM (content brief issued)',
-      distributedAt: '2026-03-29',
-      status: 'monitoring',
-      impactScore: 0,
-      notes: 'Sanitised derivatives of H-002 being woven into AXIOM pattern recognition content. Source discipline enforced — no Iranian propaganda amplification. "Both things can be true" framing deployed.',
-    },
-  ];
+export default function ImpactTab() {
+  const [items, setItems] = useState<DistributedItem[]>(PLACEHOLDER_ITEMS);
+  const [expanded, setExpanded] = useState<string | null>(null);
+  const [isLive, setIsLive] = useState(false);
+  const [lastUpdated, setLastUpdated] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!API_KEY) return;
+
+    async function load() {
+      try {
+        const [teamRes, heraldRes, redditRes] = await Promise.all([
+          fetch(`${VPS_API}/api/mission/team-reports`, { headers: { 'x-api-key': API_KEY } }),
+          fetch(`${VPS_API}/api/herald/packages`, { headers: { 'x-api-key': API_KEY } }).catch(() => null),
+          fetch(`${VPS_API}/api/axiom-reddit/queue`, { headers: { 'x-api-key': API_KEY } }).catch(() => null),
+        ]);
+
+        const liveItems: DistributedItem[] = [];
+        let idx = 0;
+
+        if (heraldRes?.ok) {
+          const herald = await heraldRes.json();
+          for (const pkg of (herald.packages || [])) {
+            idx++;
+            liveItems.push({
+              id: `HERALD-${String(idx).padStart(3, '0')}`,
+              title: pkg.filename || `HERALD Package ${idx}`,
+              tier: 1,
+              channel: 'HERALD Distribution',
+              distributedAt: pkg.content?.match?.(/\d{4}-\d{2}-\d{2}/)?.[0] || '',
+              status: 'monitoring',
+              impactScore: 0,
+              notes: typeof pkg.content === 'string' ? pkg.content.slice(0, 200) : 'HERALD distribution package',
+            });
+          }
+        }
+
+        if (redditRes?.ok) {
+          const reddit = await redditRes.json();
+          for (const item of (reddit.queue || [])) {
+            idx++;
+            liveItems.push({
+              id: `AXIOM-${item.id || String(idx).padStart(3, '0')}`,
+              title: `AXIOM Reddit: r/${item.subreddit} — ${item.type || 'comment'}`,
+              tier: 3,
+              channel: `Reddit r/${item.subreddit}`,
+              distributedAt: item.submittedAt ? formatAESTShort(item.submittedAt) : '',
+              status: item.status === 'approved' ? 'impact_confirmed' : 'monitoring',
+              impactScore: 0,
+              notes: typeof item.content === 'string' ? item.content.slice(0, 200) : '',
+            });
+          }
+        }
+
+        if (teamRes.ok) {
+          const teams = await teamRes.json();
+          for (const report of (teams.reports || [])) {
+            if (report.team === 'AXIOM' || report.team === 'HERALD') {
+              idx++;
+              const summary = report.status?.summary || report.status?.engagement || '';
+              liveItems.push({
+                id: `TEAM-${report.team}-${String(idx).padStart(3, '0')}`,
+                title: `${report.team} Team Report`,
+                tier: report.team === 'HERALD' ? 1 : 2,
+                channel: report.team,
+                distributedAt: report.received ? formatAESTShort(report.received) : '',
+                status: 'monitoring',
+                impactScore: 0,
+                notes: typeof summary === 'string' ? summary : JSON.stringify(report.status || {}).slice(0, 200),
+              });
+            }
+          }
+        }
+
+        // Use live items if any, otherwise keep placeholders
+        if (liveItems.length > 0) {
+          setItems(liveItems);
+          setIsLive(true);
+        }
+        setLastUpdated(new Date().toISOString());
+      } catch { /* fallback to placeholders */ }
+    }
+
+    load();
+    const interval = setInterval(load, 120000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const timeAgo = (iso: string) => {
+    const diff = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
+    if (diff < 60) return `${diff}s ago`;
+    if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+    return `${Math.floor(diff / 3600)}h ago`;
+  };
 
   return (
     <div className="flex flex-col gap-5">
       <div className="flex items-center gap-2 px-1">
-        <Dot color="#10b981" />
-        <span className="font-mono text-xs tracking-wider text-emerald-400">IMPACT MONITORING</span>
+        <Dot color={isLive ? '#10b981' : '#f59e0b'} pulse={isLive} />
+        <span className="font-mono text-[10px] tracking-wider" style={{ color: isLive ? '#10b981' : '#f59e0b' }}>
+          {isLive ? `LIVE — ${items.length} ITEMS TRACKED` : 'STATIC DATA'}
+        </span>
+        {lastUpdated && <span className="font-mono text-[9px] text-slate-600 ml-2">Updated {timeAgo(lastUpdated)}</span>}
       </div>
 
       {/* Overview */}
@@ -92,10 +186,10 @@ export default function ImpactTab() {
       {/* KPIs */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {[
-          { label: 'Distributed', value: placeholderItems.length, color: '#3b82f6' },
-          { label: 'Monitoring', value: placeholderItems.filter(i => i.status === 'monitoring').length, color: '#f59e0b' },
-          { label: 'Impact Confirmed', value: placeholderItems.filter(i => i.status === 'impact_confirmed').length, color: '#10b981' },
-          { label: 'Corrective Needed', value: placeholderItems.filter(i => i.status === 'corrective_needed').length, color: '#ef4444' },
+          { label: 'Distributed', value: items.length, color: '#3b82f6' },
+          { label: 'Monitoring', value: items.filter(i => i.status === 'monitoring').length, color: '#f59e0b' },
+          { label: 'Impact Confirmed', value: items.filter(i => i.status === 'impact_confirmed').length, color: '#10b981' },
+          { label: 'Corrective Needed', value: items.filter(i => i.status === 'corrective_needed').length, color: '#ef4444' },
         ].map(kpi => (
           <div key={kpi.label} className="bg-[#111b2a] border border-[#1e2d44] rounded-xl p-4">
             <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">{kpi.label}</div>
@@ -106,7 +200,7 @@ export default function ImpactTab() {
 
       {/* Items */}
       <div className="space-y-3">
-        {placeholderItems.map(item => (
+        {items.map(item => (
           <div key={item.id} className="bg-[#111b2a] border border-[#1e2d44] rounded-xl overflow-hidden"
             style={{ borderLeft: `3px solid ${statusColor(item.status)}` }}>
             <div className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-[#131f30] transition-colors"

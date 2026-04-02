@@ -1,7 +1,11 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Dot } from '../ui';
+import { formatAESTShort } from '../../lib/date-utils';
+
+const VPS_API = process.env.NEXT_PUBLIC_VPS_ENDPOINT || 'https://ops.jr8ch.com';
+const API_KEY = process.env.NEXT_PUBLIC_VIGIL_API_KEY || '';
 
 type DistTier = 'tier1' | 'tier2' | 'tier3';
 
@@ -45,6 +49,25 @@ function typeIcon(t: string) {
 
 export default function DistributionTab() {
   const [activeTier, setActiveTier] = useState<DistTier | null>(null);
+  const [livePackages, setLivePackages] = useState<Array<{ filename: string; content: string }>>([]);
+  const [isLive, setIsLive] = useState(false);
+
+  useEffect(() => {
+    if (!API_KEY) return;
+    async function load() {
+      try {
+        const res = await fetch(`${VPS_API}/api/herald/packages`, { headers: { 'x-api-key': API_KEY } });
+        if (res.ok) {
+          const data = await res.json();
+          setLivePackages(data.packages || []);
+          setIsLive(true);
+        }
+      } catch { /* silent */ }
+    }
+    load();
+    const interval = setInterval(load, 120000);
+    return () => clearInterval(interval);
+  }, []);
 
   return (
     <div className="flex flex-col gap-5">
@@ -125,9 +148,30 @@ export default function DistributionTab() {
       <div className="p-4 rounded-xl bg-red-500/[.06] border border-red-500/15">
         <div className="text-[11px] font-bold text-red-400 uppercase tracking-wider mb-1">DIRECTOR OVERRIDE</div>
         <div className="text-[12px] text-slate-400 leading-relaxed">
-          DIRECTOR may authorize any Tier 1 intel for public release through AXIOM at sole discretion. Triggers: journalist inaction (placed intel not published) or strategic timing (immediate release serves mission better). The override is simple: DIRECTOR says "release it." COMMANDER executes.
+          DIRECTOR may authorize any Tier 1 intel for public release through AXIOM at sole discretion. Triggers: journalist inaction (placed intel not published) or strategic timing (immediate release serves mission better). The override is simple: DIRECTOR says &quot;release it.&quot; COMMANDER executes.
         </div>
       </div>
+
+      {/* Live Distribution Activity */}
+      {isLive && livePackages.length > 0 && (
+        <div className="bg-[#111b2a] border border-[#1e2d44] rounded-xl p-5" style={{ borderTop: '2px solid #10b981' }}>
+          <div className="flex items-center gap-2 mb-3">
+            <Dot color="#10b981" pulse />
+            <span className="text-[13px] font-bold text-emerald-400">RECENT DISTRIBUTION ACTIVITY</span>
+            <span className="font-mono text-[10px] text-slate-500">{livePackages.length} packages</span>
+          </div>
+          <div className="space-y-2">
+            {livePackages.map((pkg, i) => (
+              <div key={i} className="p-3 rounded-lg bg-[#0a0f18] border border-[#1a2740]">
+                <div className="text-[12px] font-semibold text-slate-200 mb-1">{pkg.filename}</div>
+                {pkg.content && (
+                  <div className="text-[11px] text-slate-400 leading-relaxed line-clamp-3">{pkg.content.slice(0, 300)}</div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
