@@ -7,6 +7,7 @@ import { patternTools } from './patterns';
 import { allyTools } from './allies';
 import { reportTools } from './reports';
 import { dashboardTools } from './dashboard';
+import { deadDropTools } from './deaddrop';
 
 export interface MCPTool {
   name: string;
@@ -25,6 +26,7 @@ export const ALL_TOOLS: MCPTool[] = [
   ...allyTools,
   ...reportTools,
   ...dashboardTools,
+  ...deadDropTools,
 ];
 
 export function getToolList() {
