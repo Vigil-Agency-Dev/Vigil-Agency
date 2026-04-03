@@ -13,37 +13,72 @@ function tierColor(t: number) {
   return '#10b981';
 }
 
+function statusColor(s: string) {
+  if (s === 'APPROVED') return '#10b981';
+  if (s === 'HELD') return '#f59e0b';
+  if (s === 'REJECTED') return '#ef4444';
+  return '#3b82f6';
+}
+
 export default function HeraldTab() {
   const [isLive, setIsLive] = useState(false);
+  const [lastUpdated, setLastUpdated] = useState<string | null>(null);
   const [teamReport, setTeamReport] = useState<any>(null);
   const [expanded, setExpanded] = useState<string | null>(null);
-
   const [contacts, setContacts] = useState<any[]>([]);
   const [packages, setPackages] = useState<any[]>([]);
+  const [reviews, setReviews] = useState<any[]>([]);
+  const [reviewingFile, setReviewingFile] = useState<string | null>(null);
+  const [reviewNotes, setReviewNotes] = useState('');
+  const [actionLoading, setActionLoading] = useState(false);
+
+  async function fetchAll() {
+    if (!API_KEY) return;
+    try {
+      const [trRes, regRes, pkgRes, revRes] = await Promise.all([
+        fetch(`${VPS_API}/api/mission/team-reports`, { headers: { 'x-api-key': API_KEY } }),
+        fetch(`${VPS_API}/api/herald/registry`, { headers: { 'x-api-key': API_KEY } }).catch(() => null),
+        fetch(`${VPS_API}/api/herald/packages`, { headers: { 'x-api-key': API_KEY } }).catch(() => null),
+        fetch(`${VPS_API}/api/herald/reviews`, { headers: { 'x-api-key': API_KEY } }).catch(() => null),
+      ]);
+      if (trRes.ok) {
+        const data = await trRes.json();
+        const heraldReports = (data.reports || []).filter((r: any) => r.team === 'HERALD');
+        if (heraldReports.length > 0) setTeamReport(heraldReports[0]);
+      }
+      if (regRes?.ok) { const d = await regRes.json(); setContacts(d.contacts || []); }
+      if (pkgRes?.ok) { const d = await pkgRes.json(); setPackages(d.packages || []); }
+      if (revRes?.ok) { const d = await revRes.json(); setReviews(d.reviews || []); }
+      setIsLive(true);
+      setLastUpdated(new Date().toISOString());
+    } catch {}
+  }
 
   useEffect(() => {
-    if (!API_KEY) return;
-    async function fetchHerald() {
-      try {
-        const [trRes, regRes, pkgRes] = await Promise.all([
-          fetch(`${VPS_API}/api/mission/team-reports`, { headers: { 'x-api-key': API_KEY } }),
-          fetch(`${VPS_API}/api/herald/registry`, { headers: { 'x-api-key': API_KEY } }).catch(() => null),
-          fetch(`${VPS_API}/api/herald/packages`, { headers: { 'x-api-key': API_KEY } }).catch(() => null),
-        ]);
-        if (trRes.ok) {
-          const data = await trRes.json();
-          const heraldReports = (data.reports || []).filter((r: any) => r.team === 'HERALD');
-          if (heraldReports.length > 0) setTeamReport(heraldReports[0]);
-        }
-        if (regRes?.ok) { const d = await regRes.json(); setContacts(d.contacts || []); }
-        if (pkgRes?.ok) { const d = await pkgRes.json(); setPackages(d.packages || []); }
-        setIsLive(true);
-      } catch {}
-    }
-    fetchHerald();
-    const interval = setInterval(fetchHerald, 60000);
+    fetchAll();
+    const interval = setInterval(fetchAll, 60000);
     return () => clearInterval(interval);
   }, []);
+
+  async function handleReview(filename: string, action: 'approve' | 'hold' | 'reject') {
+    setActionLoading(true);
+    try {
+      await fetch(`${VPS_API}/api/herald/review`, {
+        method: 'POST',
+        headers: { 'x-api-key': API_KEY, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ filename, action, notes: reviewNotes }),
+      });
+      setReviewNotes('');
+      setReviewingFile(null);
+      await fetchAll(); // Refresh
+    } catch {}
+    setActionLoading(false);
+  }
+
+  // Get review status for a package
+  function getReviewStatus(filename: string) {
+    return reviews.find(r => r.filename === filename);
+  }
 
   const pipeline = [
     { stage: 'Intel Intake', icon: '\uD83D\uDCE5', color: '#3b82f6' },
@@ -61,13 +96,32 @@ export default function HeraldTab() {
     { id: 'H-004', title: 'The Epstein Triangle', tier: 1, status: 'Held \u2014 highest sensitivity', priority: 'CRITICAL' },
   ];
 
+  const pendingPackages = packages.filter(p => {
+    const review = getReviewStatus(p.filename);
+    return !review; // No review yet = pending
+  });
+
+  const reviewedPackages = packages.filter(p => {
+    const review = getReviewStatus(p.filename);
+    return !!review;
+  });
+
+  const timeAgo = (iso: string) => {
+    const diff = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
+    if (diff < 60) return `${diff}s ago`;
+    if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+    return `${Math.floor(diff / 3600)}h ago`;
+  };
+
   return (
     <div className="flex flex-col gap-5">
       <div className="flex items-center gap-2 px-1">
         <Dot color={isLive ? '#10b981' : '#f59e0b'} pulse={isLive} />
         <span className="font-mono text-xs tracking-wider" style={{ color: isLive ? '#10b981' : '#f59e0b' }}>
-          HERALD \u2014 Media Vetting & Distribution {isLive ? '\u2014 CONNECTED' : ''}
+          HERALD {'\u2014'} Media Vetting & Distribution {isLive ? `${'\u2014'} CONNECTED` : ''}
         </span>
+        {lastUpdated && <span className="font-mono text-[9px] text-slate-600 ml-2">Updated {timeAgo(lastUpdated)}</span>}
+        <button onClick={fetchAll} className="ml-auto text-[9px] font-mono text-slate-500 hover:text-cyan-400">REFRESH</button>
       </div>
 
       <div className="p-5 bg-gradient-to-r from-pink-500/[.08] to-purple-500/[.04] border border-pink-500/20 rounded-xl">
@@ -80,10 +134,11 @@ export default function HeraldTab() {
         </p>
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
         {[
           { label: 'Status', value: 'ACTIVE', color: '#10b981' },
-          { label: 'Packages', value: packages.length || candidates.length, color: '#8b5cf6' },
+          { label: 'Packages', value: packages.length, color: '#8b5cf6' },
+          { label: 'Pending Review', value: pendingPackages.length, color: pendingPackages.length > 0 ? '#ef4444' : '#64748b' },
           { label: 'Tier 1 Held', value: candidates.filter(c => c.tier === 1).length, color: '#ef4444' },
           { label: 'Media Contacts', value: contacts.length, color: '#f59e0b' },
         ].map(kpi => (
@@ -93,6 +148,117 @@ export default function HeraldTab() {
           </div>
         ))}
       </div>
+
+      {/* === PENDING DIRECTOR REVIEW === */}
+      {pendingPackages.length > 0 && (
+        <div className="bg-[#111b2a] border border-red-500/30 rounded-xl overflow-hidden" style={{ borderTop: '3px solid #ef4444' }}>
+          <div className="px-5 py-3 bg-red-500/[.06] border-b border-red-500/20 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="text-red-400 animate-pulse">{'\u26A0\uFE0F'}</span>
+              <span className="text-[13px] font-bold text-red-400">PENDING DIRECTOR REVIEW</span>
+            </div>
+            <span className="font-mono text-[11px] text-red-400">{pendingPackages.length} AWAITING</span>
+          </div>
+          <div className="divide-y divide-[#1a2740]">
+            {pendingPackages.map((pkg, i) => {
+              const isExpanded = expanded === `pending-${i}`;
+              const isReviewing = reviewingFile === pkg.filename;
+              const content = typeof pkg.content === 'string' ? pkg.content : JSON.stringify(pkg.content, null, 2);
+
+              return (
+                <div key={i} className="px-5 py-4">
+                  <div className="flex items-center justify-between cursor-pointer" onClick={() => setExpanded(isExpanded ? null : `pending-${i}`)}>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-[13px] font-semibold text-slate-200">{pkg.filename}</span>
+                      <span className="font-mono text-[10px] px-2 py-0.5 rounded bg-red-500/10 text-red-400">PENDING REVIEW</span>
+                    </div>
+                    <span className="text-slate-500 text-xs">{isExpanded ? '\u25BE' : '\u25B8'}</span>
+                  </div>
+
+                  {isExpanded && (
+                    <div className="mt-3">
+                      {/* Content Preview */}
+                      <div className="text-[12px] text-slate-300 leading-relaxed p-4 rounded-lg bg-[#0a0f18] border border-[#1a2740] max-h-[400px] overflow-y-auto whitespace-pre-wrap mb-3" style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '11px' }}>
+                        {content}
+                      </div>
+
+                      {/* Review Actions */}
+                      {isReviewing ? (
+                        <div className="space-y-2">
+                          <textarea
+                            value={reviewNotes}
+                            onChange={e => setReviewNotes(e.target.value)}
+                            placeholder="Review notes (optional) — what needs changing for HOLD, or approval confirmation..."
+                            className="w-full bg-[#0a0f18] border border-[#2a3550] rounded-md p-2.5 text-sm text-slate-200 placeholder:text-slate-600 focus:border-cyan-500 outline-none resize-y min-h-[60px]"
+                          />
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => handleReview(pkg.filename, 'approve')}
+                              disabled={actionLoading}
+                              className="flex-1 py-2.5 rounded-lg bg-green-500/15 text-green-400 text-[13px] font-bold hover:bg-green-500/25 transition-colors disabled:opacity-50 border border-green-500/20"
+                            >
+                              {'\u2713'} APPROVE FOR DISTRIBUTION
+                            </button>
+                            <button
+                              onClick={() => handleReview(pkg.filename, 'hold')}
+                              disabled={actionLoading}
+                              className="flex-1 py-2.5 rounded-lg bg-amber-500/15 text-amber-400 text-[13px] font-bold hover:bg-amber-500/25 transition-colors disabled:opacity-50 border border-amber-500/20"
+                            >
+                              {'\u270B'} HOLD FOR REVISIONS
+                            </button>
+                            <button
+                              onClick={() => { setReviewingFile(null); setReviewNotes(''); }}
+                              className="px-4 py-2.5 rounded-lg text-slate-500 text-[11px] hover:text-slate-300 transition-colors"
+                            >
+                              CANCEL
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => setReviewingFile(pkg.filename)}
+                          className="w-full py-2.5 rounded-lg bg-cyan-500/10 text-cyan-400 text-[12px] font-bold hover:bg-cyan-500/20 transition-colors border border-cyan-500/20"
+                        >
+                          REVIEW THIS PACKAGE
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* === REVIEWED PACKAGES === */}
+      {reviewedPackages.length > 0 && (
+        <div className="bg-[#111b2a] border border-[#1e2d44] rounded-xl overflow-hidden" style={{ borderTop: '2px solid #10b981' }}>
+          <div className="px-5 py-3 bg-[#0d1520] border-b border-[#1e2d44] flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span>{'\u2705'}</span>
+              <span className="text-[13px] font-bold text-slate-200">Reviewed Packages</span>
+            </div>
+            <span className="font-mono text-[11px] text-slate-400">{reviewedPackages.length} REVIEWED</span>
+          </div>
+          <div className="divide-y divide-[#1a2740]">
+            {reviewedPackages.map((pkg, i) => {
+              const review = getReviewStatus(pkg.filename);
+              const sc = statusColor(review?.action?.toUpperCase() || '');
+              return (
+                <div key={i} className="flex items-center gap-3 px-5 py-3">
+                  <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: sc }} />
+                  <span className="text-[12px] text-slate-300 flex-1">{pkg.filename}</span>
+                  <span className="font-mono text-[10px] px-2 py-0.5 rounded" style={{ background: `${sc}15`, color: sc }}>
+                    {review?.action?.toUpperCase()}
+                  </span>
+                  {review?.reviewedAt && <span className="font-mono text-[9px] text-slate-600">{formatAESTShort(review.reviewedAt)}</span>}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Pipeline */}
       <div className="bg-[#111b2a] border border-[#1e2d44] rounded-xl overflow-hidden" style={{ borderTop: '2px solid #8b5cf6' }}>
@@ -124,8 +290,7 @@ export default function HeraldTab() {
         </div>
         <div className="divide-y divide-[#1a2740]">
           {candidates.map(c => (
-            <div key={c.id} className="flex items-start gap-3 px-5 py-3 hover:bg-[#131f30] transition-colors cursor-pointer"
-              onClick={() => setExpanded(expanded === c.id ? null : c.id)}>
+            <div key={c.id} className="flex items-start gap-3 px-5 py-3 hover:bg-[#131f30] transition-colors">
               <div className="w-2 h-2 rounded-full mt-1.5 shrink-0" style={{ backgroundColor: tierColor(c.tier) }} />
               <div className="flex-1">
                 <div className="flex items-center gap-2 flex-wrap">
@@ -156,7 +321,7 @@ export default function HeraldTab() {
             {contacts.map((c: any, i: number) => {
               const trustColor = c.trustLevel?.includes('L3') || c.trustLevel?.includes('L4') || c.trustLevel?.includes('L5') ? '#10b981' : c.trustLevel?.includes('L2') ? '#3b82f6' : c.trustLevel?.includes('L1') ? '#f59e0b' : '#64748b';
               return (
-                <div key={i} className="px-5 py-3 hover:bg-[#131f30] transition-colors cursor-pointer" onClick={() => setExpanded(expanded === c.id ? null : c.id)}>
+                <div key={i} className="px-5 py-3 hover:bg-[#131f30] transition-colors cursor-pointer" onClick={() => setExpanded(expanded === `contact-${i}` ? null : `contact-${i}`)}>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="font-mono text-[10px] text-slate-600">{c.id}</span>
@@ -165,10 +330,10 @@ export default function HeraldTab() {
                       <span className="font-mono text-[9px] text-slate-500">{c.type}</span>
                       {c.opRelevance && <span className="font-mono text-[9px] text-cyan-400">{c.opRelevance}</span>}
                     </div>
-                    <span className="text-slate-500 text-xs">{expanded === c.id ? '\u25BE' : '\u25B8'}</span>
+                    <span className="text-slate-500 text-xs">{expanded === `contact-${i}` ? '\u25BE' : '\u25B8'}</span>
                   </div>
                   {c.expertise && <div className="text-[11px] text-slate-500 mt-0.5">{c.expertise}</div>}
-                  {expanded === c.id && c.profile && (
+                  {expanded === `contact-${i}` && c.profile && (
                     <div className="mt-2 text-[11px] text-slate-400 leading-relaxed p-3 rounded-lg bg-[#0a0f18] border border-[#1a2740] whitespace-pre-wrap max-h-[300px] overflow-y-auto" style={{ scrollbarWidth: 'thin' }}>
                       {c.profile}
                     </div>
@@ -209,7 +374,7 @@ export default function HeraldTab() {
         <div className="bg-[#111b2a] border border-[#1e2d44] rounded-xl p-4" style={{ borderLeft: '3px solid #ec4899' }}>
           <div className="text-[11px] font-bold text-pink-400 uppercase tracking-wider mb-2">Latest HERALD Report</div>
           <div className="text-[12px] text-slate-400 leading-relaxed">{teamReport.status?.summary || JSON.stringify(teamReport.status)}</div>
-          <div className="font-mono text-[10px] text-slate-600 mt-1">{formatAESTShort(teamReport.status?.last_run)}</div>
+          <div className="font-mono text-[10px] text-slate-600 mt-1">{formatAESTShort(teamReport.status?.last_run || teamReport.received)}</div>
         </div>
       )}
     </div>
