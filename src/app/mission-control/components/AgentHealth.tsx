@@ -24,6 +24,7 @@ const EXPECTED_INTERVALS: Record<string, number> = {
   axiom: 12,
   bastion: 24,
   herald: 48,
+  cairn: 24,
 };
 
 function getHealthColor(agentId: string, lastTime: string | undefined): string {

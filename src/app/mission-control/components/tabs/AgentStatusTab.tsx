@@ -45,6 +45,7 @@ const REALM_COLORS: Record<string, string> = {
   Cyber: '#ef4444',
   'Media/Distribution': '#ec4899',
   Media: '#ec4899',
+  'OSINT/Engagement': '#06b6d4',
 };
 
 const REALM_ICONS: Record<string, string> = {
@@ -56,6 +57,7 @@ const REALM_ICONS: Record<string, string> = {
   Cyber: '\uD83D\uDD12',
   'Media/Distribution': '\uD83D\uDCE2',
   Media: '\uD83D\uDCE2',
+  'OSINT/Engagement': '\uD83D\uDD0D',
 };
 
 // Expected heartbeat intervals per agent (hours)
@@ -67,6 +69,7 @@ const EXPECTED_INTERVALS: Record<string, number> = {
   axiom: 12,
   bastion: 24,
   herald: 48,
+  cairn: 24,
 };
 
 function timeSince(iso: string): string {
@@ -146,6 +149,7 @@ export default function AgentStatusTab() {
       axiom: ['axiom', 'AXIOM'],
       bastion: ['bastion', 'BASTION'],
       herald: ['herald', 'HERALD'],
+      cairn: ['cairn', 'CAIRN', 'axiom-discord', 'axiom-telegram', 'AXIOM-DISCORD', 'AXIOM-TELEGRAM'],
     };
     const names = idMap[agentId] || [agentId];
     return teamReports.find(r => names.some(n => r.team?.toLowerCase() === n.toLowerCase()));
