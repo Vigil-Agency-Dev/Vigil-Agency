@@ -1,36 +1,56 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Badge, Dot } from '../ui';
-import { formatAESTShort } from '../../lib/date-utils';
 
 const VPS_API = process.env.NEXT_PUBLIC_VPS_ENDPOINT || 'https://ops.jr8ch.com';
 const API_KEY = process.env.NEXT_PUBLIC_VIGIL_API_KEY || '';
 
-interface CorrelationNode {
+interface GraphNode {
   id: string;
   label: string;
-  type: 'threat' | 'hypothesis' | 'pattern' | 'entity';
+  type: 'threat' | 'hypothesis' | 'pattern' | 'entity' | 'geo-threat' | 'ally';
   severity?: string;
   status?: string;
   detail?: string;
   raw?: string;
   crossRefs: string[];
   filename?: string;
+  x: number;
+  y: number;
+}
+
+interface GraphEdge {
+  source: string;
+  target: string;
+  label?: string;
 }
 
 const TYPE_COLORS: Record<string, string> = {
   threat: '#ef4444',
+  'geo-threat': '#f97316',
   hypothesis: '#8b5cf6',
   pattern: '#10b981',
   entity: '#f59e0b',
+  ally: '#3b82f6',
+};
+
+const TYPE_LABELS: Record<string, string> = {
+  threat: 'Digital Threats',
+  'geo-threat': 'Geopolitical Threats',
+  hypothesis: 'Hypotheses',
+  pattern: 'Patterns',
+  entity: 'Shared Entities',
+  ally: 'Allies',
 };
 
 const TYPE_ICONS: Record<string, string> = {
   threat: '\u26A0\uFE0F',
+  'geo-threat': '\uD83C\uDF0D',
   hypothesis: '\uD83E\uDD14',
   pattern: '\uD83D\uDD17',
   entity: '\uD83C\uDFAD',
+  ally: '\uD83E\uDD1D',
 };
 
 function renderMarkdown(raw: string) {
@@ -40,115 +60,178 @@ function renderMarkdown(raw: string) {
     if (t.startsWith('# ')) return <h2 key={i} className="text-sm font-bold text-cyan-400 mt-3 mb-1.5">{t.slice(2)}</h2>;
     if (t.startsWith('## ')) return <h3 key={i} className="text-[13px] font-bold text-slate-200 mt-2 mb-1 border-b border-[#2a3550] pb-1">{t.slice(3)}</h3>;
     if (t.startsWith('### ')) return <h4 key={i} className="text-[12px] font-semibold text-purple-400 mt-2 mb-1">{t.slice(4)}</h4>;
-    if (t.startsWith('- ') || t.startsWith('* ')) {
-      return <div key={i} className="flex items-start gap-2 text-[11px] text-slate-400 pl-2 py-0.5"><span className="text-slate-600 mt-0.5">{'\u25B8'}</span><span>{t.slice(2)}</span></div>;
-    }
+    if (t.startsWith('- ') || t.startsWith('* ')) return <div key={i} className="flex items-start gap-2 text-[11px] text-slate-400 pl-2 py-0.5"><span className="text-slate-600 mt-0.5">{'\u25B8'}</span><span>{t.slice(2)}</span></div>;
     if (t.startsWith('---')) return <hr key={i} className="border-[#2a3550] my-2" />;
     const rendered = t.replace(/\*\*([^*]+)\*\*/g, '<b class="text-slate-200 font-semibold">$1</b>');
     return <div key={i} className="text-[11px] text-slate-400 leading-relaxed py-0.5" dangerouslySetInnerHTML={{ __html: rendered }} />;
   });
 }
 
+// Layout nodes in grouped clusters around the center
+function layoutNodes(nodes: Omit<GraphNode, 'x' | 'y'>[], width: number, height: number): GraphNode[] {
+  const cx = width / 2;
+  const cy = height / 2;
+  const types = [...new Set(nodes.map(n => n.type))];
+  const typePositions: Record<string, { angle: number; radius: number }> = {};
+
+  // Assign each type a sector of the circle
+  types.forEach((type, i) => {
+    typePositions[type] = {
+      angle: (i / types.length) * Math.PI * 2 - Math.PI / 2,
+      radius: Math.min(width, height) * 0.32,
+    };
+  });
+
+  return nodes.map((node, _) => {
+    const typeInfo = typePositions[node.type];
+    if (!typeInfo) return { ...node, x: cx, y: cy };
+
+    const siblings = nodes.filter(n => n.type === node.type);
+    const idx = siblings.indexOf(node);
+    const count = siblings.length;
+
+    // Spread nodes of same type in a small cluster around their sector position
+    const spread = Math.min(count * 18, 120);
+    const subAngle = count > 1 ? ((idx / (count - 1)) - 0.5) * (spread / typeInfo.radius) : 0;
+    const jitter = count > 1 ? (idx % 2 === 0 ? 15 : -15) : 0;
+
+    const x = cx + Math.cos(typeInfo.angle + subAngle) * (typeInfo.radius + jitter);
+    const y = cy + Math.sin(typeInfo.angle + subAngle) * (typeInfo.radius + jitter);
+
+    return { ...node, x: Math.max(60, Math.min(width - 60, x)), y: Math.max(40, Math.min(height - 40, y)) };
+  });
+}
+
 export default function CorrelationMapTab() {
   const [isLive, setIsLive] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<string | null>(null);
-  const [nodes, setNodes] = useState<CorrelationNode[]>([]);
+  const [nodes, setNodes] = useState<GraphNode[]>([]);
+  const [edges, setEdges] = useState<GraphEdge[]>([]);
   const [filter, setFilter] = useState<string | null>(null);
-  const [expanded, setExpanded] = useState<string | null>(null);
+  const [selected, setSelected] = useState<GraphNode | null>(null);
   const [showDoc, setShowDoc] = useState<string | null>(null);
   const [docContent, setDocContent] = useState<string | null>(null);
   const [loadingDoc, setLoadingDoc] = useState(false);
+
+  const SVG_WIDTH = 960;
+  const SVG_HEIGHT = 600;
 
   useEffect(() => {
     if (!API_KEY) return;
 
     async function load() {
       try {
-        const [threatsRes, hyposRes, patternsRes, entitiesRes] = await Promise.all([
+        const [threatsRes, hyposRes, patternsRes, entitiesRes, regRes, alliesRes] = await Promise.all([
           fetch(`${VPS_API}/api/mission/threats`, { headers: { 'x-api-key': API_KEY } }),
           fetch(`${VPS_API}/api/mission/hypotheses`, { headers: { 'x-api-key': API_KEY } }),
           fetch(`${VPS_API}/api/mission/patterns`, { headers: { 'x-api-key': API_KEY } }),
           fetch(`${VPS_API}/api/mission/shared-entities`, { headers: { 'x-api-key': API_KEY } }).catch(() => null),
+          fetch(`${VPS_API}/api/mission/threat-register`, { headers: { 'x-api-key': API_KEY } }).catch(() => null),
+          fetch(`${VPS_API}/api/mission/allies`, { headers: { 'x-api-key': API_KEY } }).catch(() => null),
         ]);
 
-        const allNodes: CorrelationNode[] = [];
+        const rawNodes: Omit<GraphNode, 'x' | 'y'>[] = [];
+        const allEdges: GraphEdge[] = [];
+        const nodeIds = new Set<string>();
 
+        // Digital threats (DV-series)
         if (threatsRes.ok) {
           const data = await threatsRes.json();
           for (const t of (data.threats || [])) {
-            allNodes.push({
-              id: t.id || `T-${allNodes.length}`,
-              label: t.name || t.id,
-              type: 'threat',
-              severity: t.severity,
-              status: t.status,
-              detail: t.detail || '',
-              crossRefs: [],
-              filename: t.source,
-            });
+            const id = t.id || `DV-${rawNodes.length}`;
+            if (nodeIds.has(id)) continue;
+            nodeIds.add(id);
+            rawNodes.push({ id, label: t.name || t.id, type: 'threat', severity: t.severity, status: t.status, detail: t.detail, crossRefs: [], filename: t.source });
           }
         }
 
+        // Geopolitical threats (T-series from MERIDIAN threat register)
+        if (regRes?.ok) {
+          const data = await regRes.json();
+          const threats = Array.isArray(data.threats) ? data.threats : [];
+          for (const t of threats.slice(0, 14)) {
+            const id = t.id || t.threat_id || `T-${rawNodes.length}`;
+            if (nodeIds.has(id)) continue;
+            nodeIds.add(id);
+            rawNodes.push({ id, label: t.name || t.title || id, type: 'geo-threat', severity: t.severity, status: t.status, detail: t.detail || t.description || '', crossRefs: [], filename: t.filename });
+          }
+        }
+
+        // Hypotheses
         if (hyposRes.ok) {
           const data = await hyposRes.json();
           for (const h of (data.hypotheses || [])) {
-            allNodes.push({
-              id: h.id || `H-${allNodes.length}`,
-              label: h.title || h.id || 'Hypothesis',
-              type: 'hypothesis',
-              status: h.status,
-              detail: h.classification || '',
-              raw: h.raw || '',
-              crossRefs: Array.isArray(h.crossRef) ? h.crossRef : [],
-              filename: h.filename,
-            });
-          }
-        }
+            const id = h.id || `H-${rawNodes.length}`;
+            if (nodeIds.has(id)) continue;
+            nodeIds.add(id);
+            const crossRefs = Array.isArray(h.crossRef) ? h.crossRef : [];
+            rawNodes.push({ id, label: h.title || id, type: 'hypothesis', status: h.status, detail: h.classification || '', raw: h.raw, crossRefs, filename: h.filename });
 
-        if (patternsRes.ok) {
-          const data = await patternsRes.json();
-          for (const p of (data.patterns || [])) {
-            const crossRefs: string[] = [];
-            if (p.linked_hypothesis) crossRefs.push(p.linked_hypothesis);
-            if (p.linked_threats && Array.isArray(p.linked_threats)) crossRefs.push(...p.linked_threats);
-            if (p.cross_references && Array.isArray(p.cross_references)) crossRefs.push(...p.cross_references);
-
-            allNodes.push({
-              id: p.id || p.pattern_id || `PM-${allNodes.length}`,
-              label: p.pattern_class || p.title || p.id || 'Pattern',
-              type: 'pattern',
-              detail: [p.lumen_instance, p.epstein_instance, p.detail].filter(Boolean).join(' | '),
-              crossRefs,
-              filename: p.filename,
-            });
-          }
-        }
-
-        if (entitiesRes?.ok) {
-          const data = await entitiesRes.json();
-          for (const e of (data.entities || [])) {
-            allNodes.push({
-              id: e.id || e.name || `SE-${allNodes.length}`,
-              label: e.name || e.id || 'Entity',
-              type: 'entity',
-              detail: e.type || '',
-              crossRefs: [],
-              filename: e.filename,
-            });
-          }
-        }
-
-        // Build cross-references bidirectionally
-        for (const node of allNodes) {
-          for (const ref of node.crossRefs) {
-            const target = allNodes.find(n => n.id === ref || n.label.includes(ref) || n.id.includes(ref));
-            if (target && !target.crossRefs.includes(node.id)) {
-              target.crossRefs.push(node.id);
+            // Build edges from cross-references
+            for (const ref of crossRefs) {
+              allEdges.push({ source: id, target: ref, label: 'cross-ref' });
             }
           }
         }
 
-        setNodes(allNodes);
+        // Pattern matches
+        if (patternsRes.ok) {
+          const data = await patternsRes.json();
+          for (const p of (data.patterns || [])) {
+            const id = p.id || p.pattern_id || `PM-${rawNodes.length}`;
+            if (nodeIds.has(id)) continue;
+            nodeIds.add(id);
+            const crossRefs: string[] = [];
+            if (p.linked_hypothesis) crossRefs.push(p.linked_hypothesis);
+            if (Array.isArray(p.linked_threats)) crossRefs.push(...p.linked_threats);
+            if (Array.isArray(p.cross_references)) crossRefs.push(...p.cross_references);
+            rawNodes.push({ id, label: p.pattern_class || p.title || id, type: 'pattern', detail: [p.lumen_instance, p.epstein_instance].filter(Boolean).join(' | '), crossRefs, filename: p.filename });
+
+            for (const ref of crossRefs) {
+              allEdges.push({ source: id, target: ref, label: 'linked' });
+            }
+          }
+        }
+
+        // Shared entities
+        if (entitiesRes?.ok) {
+          const data = await entitiesRes.json();
+          for (const e of (data.entities || [])) {
+            const id = e.id || e.name || `SE-${rawNodes.length}`;
+            if (nodeIds.has(id)) continue;
+            nodeIds.add(id);
+            rawNodes.push({ id, label: e.name || id, type: 'entity', detail: e.type || '', crossRefs: [], filename: e.filename });
+          }
+        }
+
+        // Top allies
+        if (alliesRes?.ok) {
+          const data = await alliesRes.json();
+          for (const a of (data.allies || []).slice(0, 6)) {
+            const id = a.handle || a.name || `ALLY-${rawNodes.length}`;
+            if (nodeIds.has(id)) continue;
+            nodeIds.add(id);
+            rawNodes.push({ id, label: a.handle || a.name || id, type: 'ally', detail: a.alignment || a.notes || '', crossRefs: [] });
+          }
+        }
+
+        // Resolve edge targets — match by ID substring or label
+        const resolvedEdges: GraphEdge[] = [];
+        for (const edge of allEdges) {
+          const target = rawNodes.find(n =>
+            n.id === edge.target ||
+            edge.target.includes(n.id) ||
+            n.id.includes(edge.target) ||
+            n.label.toLowerCase().includes(edge.target.toLowerCase())
+          );
+          if (target) {
+            resolvedEdges.push({ source: edge.source, target: target.id, label: edge.label });
+          }
+        }
+
+        const laidOut = layoutNodes(rawNodes, SVG_WIDTH, SVG_HEIGHT);
+        setNodes(laidOut);
+        setEdges(resolvedEdges);
         setIsLive(true);
         setLastUpdated(new Date().toISOString());
       } catch { setIsLive(false); }
@@ -159,52 +242,22 @@ export default function CorrelationMapTab() {
     return () => clearInterval(interval);
   }, []);
 
-  // Load full document from dead-drop
   async function loadDocument(filename: string) {
     setShowDoc(filename);
     setDocContent(null);
     setLoadingDoc(true);
     try {
-      // Try multiple paths
-      const paths = [filename, `${filename}`];
-      for (const p of paths) {
-        try {
-          const res = await fetch(`${VPS_API}/api/dead-drop/file?path=${encodeURIComponent(p)}`, {
-            headers: { 'x-api-key': API_KEY },
-          });
-          if (res.ok) {
-            setDocContent(await res.text());
-            setLoadingDoc(false);
-            return;
-          }
-        } catch { /* try next */ }
-      }
-      setDocContent('Document not found in dead-drop.');
-    } catch {
-      setDocContent('Error loading document.');
-    }
+      const res = await fetch(`${VPS_API}/api/dead-drop/file?path=${encodeURIComponent(filename)}`, { headers: { 'x-api-key': API_KEY } });
+      if (res.ok) { setDocContent(await res.text()); } else { setDocContent('Document not found.'); }
+    } catch { setDocContent('Error loading document.'); }
     setLoadingDoc(false);
   }
 
   const filteredNodes = filter ? nodes.filter(n => n.type === filter) : nodes;
-
-  // Find connections for a node
-  function getConnections(node: CorrelationNode) {
-    const connected: CorrelationNode[] = [];
-    // Nodes this one references
-    for (const ref of node.crossRefs) {
-      const target = nodes.find(n => n.id === ref || n.label.includes(ref) || n.id.includes(ref));
-      if (target) connected.push(target);
-    }
-    // Nodes that reference this one
-    for (const other of nodes) {
-      if (other.id === node.id) continue;
-      if (other.crossRefs.some(r => node.id.includes(r) || node.label.includes(r) || r.includes(node.id))) {
-        if (!connected.find(c => c.id === other.id)) connected.push(other);
-      }
-    }
-    return connected;
-  }
+  const filteredNodeIds = new Set(filteredNodes.map(n => n.id));
+  const visibleEdges = edges.filter(e => filteredNodeIds.has(e.source) && filteredNodeIds.has(e.target));
+  const selectedEdges = selected ? edges.filter(e => e.source === selected.id || e.target === selected.id) : [];
+  const connectedIds = new Set(selectedEdges.flatMap(e => [e.source, e.target]));
 
   const timeAgo = (iso: string) => {
     const diff = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
@@ -213,43 +266,20 @@ export default function CorrelationMapTab() {
     return `${Math.floor(diff / 3600)}h ago`;
   };
 
-  // Stats
-  const threatCount = nodes.filter(n => n.type === 'threat').length;
-  const hypoCount = nodes.filter(n => n.type === 'hypothesis').length;
-  const patternCount = nodes.filter(n => n.type === 'pattern').length;
-  const entityCount = nodes.filter(n => n.type === 'entity').length;
-  const totalConnections = nodes.reduce((sum, n) => sum + n.crossRefs.length, 0);
-
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-center gap-2 px-1">
         <Dot color={isLive ? '#10b981' : '#f59e0b'} pulse={isLive} />
         <span className="font-mono text-[10px] tracking-wider" style={{ color: isLive ? '#10b981' : '#f59e0b' }}>
-          {isLive ? `LIVE — ${nodes.length} ITEMS · ${totalConnections} CROSS-REFERENCES` : 'CONNECTING...'}
+          {isLive ? `LIVE — ${nodes.length} NODES · ${edges.length} CONNECTIONS` : 'CONNECTING...'}
         </span>
         {lastUpdated && <span className="font-mono text-[9px] text-slate-600 ml-2">Updated {timeAgo(lastUpdated)}</span>}
-      </div>
-
-      {/* KPI Strip */}
-      <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
-        {[
-          { label: 'Threats', value: threatCount, color: TYPE_COLORS.threat },
-          { label: 'Hypotheses', value: hypoCount, color: TYPE_COLORS.hypothesis },
-          { label: 'Patterns', value: patternCount, color: TYPE_COLORS.pattern },
-          { label: 'Entities', value: entityCount, color: TYPE_COLORS.entity },
-          { label: 'Cross-Refs', value: totalConnections, color: '#06b6d4' },
-        ].map(kpi => (
-          <div key={kpi.label} className="bg-[#111b2a] border border-[#1e2d44] rounded-lg p-3" style={{ borderLeft: `3px solid ${kpi.color}` }}>
-            <div className="text-[9px] text-slate-500 uppercase tracking-wider">{kpi.label}</div>
-            <div className="font-mono text-lg font-bold" style={{ color: kpi.color }}>{kpi.value}</div>
-          </div>
-        ))}
       </div>
 
       {/* Type Filter */}
       <div className="flex items-center gap-2 flex-wrap">
         <button
-          onClick={() => setFilter(null)}
+          onClick={() => { setFilter(null); setSelected(null); }}
           className={`text-[10px] font-mono px-2.5 py-1 rounded border transition-all ${!filter ? 'border-cyan-500/30 bg-cyan-500/10 text-cyan-400' : 'border-[#2a3550] text-slate-500 hover:text-slate-300'}`}
         >
           ALL ({nodes.length})
@@ -260,12 +290,12 @@ export default function CorrelationMapTab() {
           return (
             <button
               key={type}
-              onClick={() => setFilter(filter === type ? null : type)}
+              onClick={() => { setFilter(filter === type ? null : type); setSelected(null); }}
               className={`text-[10px] font-mono px-2.5 py-1 rounded border transition-all flex items-center gap-1.5 ${filter === type ? 'bg-white/[.05]' : 'border-[#2a3550] text-slate-500 hover:text-slate-300'}`}
               style={filter === type ? { borderColor: `${color}50`, color } : undefined}
             >
               <span>{TYPE_ICONS[type]}</span>
-              {type.toUpperCase()} ({count})
+              {TYPE_LABELS[type] || type} ({count})
             </button>
           );
         })}
@@ -277,138 +307,192 @@ export default function CorrelationMapTab() {
           <div className="w-full max-w-3xl max-h-[80vh] bg-[#0d1520] border border-[#2a3550] rounded-xl shadow-2xl overflow-hidden" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between px-5 py-3 bg-[#111827] border-b border-[#1e2d44]">
               <span className="font-mono text-[12px] text-slate-200">{showDoc}</span>
-              <button onClick={() => setShowDoc(null)} className="text-[10px] font-mono text-slate-500 hover:text-slate-300">CLOSE</button>
+              <button onClick={() => setShowDoc(null)} className="text-[10px] font-mono text-slate-500 hover:text-slate-300">CLOSE (ESC)</button>
             </div>
             <div className="p-5 overflow-y-auto max-h-[70vh]" style={{ scrollbarWidth: 'thin' }}>
-              {loadingDoc ? (
-                <div className="text-center py-10 text-slate-500 animate-pulse">Loading document...</div>
-              ) : docContent ? (
-                <div>{renderMarkdown(docContent)}</div>
-              ) : (
-                <div className="text-center py-10 text-slate-600">No content</div>
-              )}
+              {loadingDoc ? <div className="text-center py-10 text-slate-500 animate-pulse">Loading document...</div>
+                : docContent ? <div>{renderMarkdown(docContent)}</div>
+                : <div className="text-center py-10 text-slate-600">No content</div>}
             </div>
           </div>
         </div>
       )}
 
-      {/* Correlation Items */}
-      <div className="space-y-2">
-        {filteredNodes.map(node => {
-          const color = TYPE_COLORS[node.type] || '#64748b';
-          const icon = TYPE_ICONS[node.type] || '\u2022';
-          const connections = getConnections(node);
-          const isExpanded = expanded === node.id;
+      <div className="flex gap-4" style={{ minHeight: '620px' }}>
+        {/* SVG Node Map */}
+        <div className="flex-1 rounded-xl border border-[#2a3550] overflow-hidden bg-[#060a12] relative">
+          {/* Type labels on the map */}
+          <svg width="100%" height="620" viewBox={`0 0 ${SVG_WIDTH} ${SVG_HEIGHT}`} className="select-none">
+            {/* Grid background */}
+            <defs>
+              <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+                <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#1e2d44" strokeWidth="0.3" opacity="0.3" />
+              </pattern>
+            </defs>
+            <rect width="100%" height="100%" fill="url(#grid)" />
 
-          return (
-            <div key={node.id} className="bg-[#111b2a] border border-[#1e2d44] rounded-xl overflow-hidden" style={{ borderLeft: `3px solid ${color}` }}>
-              {/* Header */}
-              <div
-                className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-[#131f30] transition-colors"
-                onClick={() => setExpanded(isExpanded ? null : node.id)}
-              >
-                <span className="text-base flex-shrink-0">{icon}</span>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-mono text-[10px] text-slate-500">{node.id}</span>
-                    <span className="text-[13px] font-semibold text-slate-200 truncate">{node.label}</span>
-                    {node.severity && <Badge level={node.severity as any} small />}
-                    {node.status && (
-                      <span className="font-mono text-[9px] px-1.5 py-0.5 rounded bg-white/[.03] text-slate-400">{node.status}</span>
-                    )}
+            {/* Type cluster labels */}
+            {!filter && (() => {
+              const types = [...new Set(nodes.map(n => n.type))];
+              return types.map((type, i) => {
+                const typeNodes = nodes.filter(n => n.type === type);
+                if (typeNodes.length === 0) return null;
+                const avgX = typeNodes.reduce((s, n) => s + n.x, 0) / typeNodes.length;
+                const avgY = typeNodes.reduce((s, n) => s + n.y, 0) / typeNodes.length;
+                return (
+                  <text key={type} x={avgX} y={Math.max(20, avgY - 45)} textAnchor="middle" fill={TYPE_COLORS[type]} fontSize="10" fontWeight="bold" opacity="0.4" fontFamily="'JetBrains Mono', monospace">
+                    {(TYPE_LABELS[type] || type).toUpperCase()}
+                  </text>
+                );
+              });
+            })()}
+
+            {/* Edges */}
+            {(filter ? visibleEdges : edges).map((edge, i) => {
+              const src = nodes.find(n => n.id === edge.source);
+              const tgt = nodes.find(n => n.id === edge.target);
+              if (!src || !tgt) return null;
+              const isHighlighted = selected && (edge.source === selected.id || edge.target === selected.id);
+              const dimmed = selected && !isHighlighted;
+              return (
+                <line key={i} x1={src.x} y1={src.y} x2={tgt.x} y2={tgt.y}
+                  stroke={isHighlighted ? '#06b6d4' : '#2a3550'}
+                  strokeWidth={isHighlighted ? 2.5 : 1}
+                  strokeDasharray={isHighlighted ? undefined : '4 4'}
+                  opacity={dimmed ? 0.08 : isHighlighted ? 0.9 : 0.4}
+                />
+              );
+            })}
+
+            {/* Nodes */}
+            {filteredNodes.map(node => {
+              const color = TYPE_COLORS[node.type] || '#64748b';
+              const isSelected = selected?.id === node.id;
+              const isConnected = connectedIds.has(node.id);
+              const dimmed = selected && !isSelected && !isConnected;
+              const r = isSelected ? 20 : 14;
+
+              return (
+                <g key={node.id} onClick={() => setSelected(isSelected ? null : node)} style={{ cursor: 'pointer' }}>
+                  {/* Glow effect for selected */}
+                  {isSelected && <circle cx={node.x} cy={node.y} r={r + 8} fill={`${color}10`} />}
+                  <circle cx={node.x} cy={node.y} r={r}
+                    fill={`${color}${isSelected ? '30' : '15'}`}
+                    stroke={color}
+                    strokeWidth={isSelected ? 3 : 1.5}
+                    opacity={dimmed ? 0.15 : 1}
+                  />
+                  {/* ID label inside node */}
+                  <text x={node.x} y={node.y + 3.5} textAnchor="middle" fill={dimmed ? '#334155' : color} fontSize="8" fontWeight="bold" fontFamily="'JetBrains Mono', monospace">
+                    {node.id.length > 6 ? node.id.slice(0, 6) : node.id}
+                  </text>
+                  {/* Name label below */}
+                  <text x={node.x} y={node.y + r + 14} textAnchor="middle" fill={dimmed ? '#1e293b' : '#94a3b8'} fontSize="8.5" fontFamily="'JetBrains Mono', monospace">
+                    {node.label.length > 30 ? node.label.slice(0, 30) + '...' : node.label}
+                  </text>
+                </g>
+              );
+            })}
+          </svg>
+        </div>
+
+        {/* Detail Panel */}
+        <div className="w-80 flex-shrink-0 rounded-xl border border-[#2a3550] bg-[#0a0e17] overflow-y-auto" style={{ scrollbarWidth: 'thin' }}>
+          {selected ? (() => {
+            const color = TYPE_COLORS[selected.type] || '#64748b';
+            const connections = selectedEdges.map(e => {
+              const otherId = e.source === selected.id ? e.target : e.source;
+              return nodes.find(n => n.id === otherId);
+            }).filter(Boolean) as GraphNode[];
+
+            return (
+              <div>
+                {/* Header */}
+                <div className="px-4 py-3 border-b border-[#1e2d44]" style={{ borderTop: `3px solid ${color}` }}>
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-lg">{TYPE_ICONS[selected.type]}</span>
+                    <span className="font-mono text-[10px] uppercase tracking-wider" style={{ color }}>{TYPE_LABELS[selected.type] || selected.type}</span>
                   </div>
-                  {node.detail && <div className="text-[11px] text-slate-500 mt-0.5 truncate">{node.detail}</div>}
+                  <div className="text-[14px] font-bold text-slate-200">{selected.id}</div>
+                  <div className="text-[12px] text-slate-300 mt-1">{selected.label}</div>
+                  {selected.severity && <Badge level={selected.severity as any} small />}
+                  {selected.status && <span className="font-mono text-[9px] ml-2 px-1.5 py-0.5 rounded bg-white/[.03] text-slate-400">{selected.status}</span>}
                 </div>
-                <div className="flex items-center gap-2 flex-shrink-0">
-                  {connections.length > 0 && (
-                    <span className="font-mono text-[9px] px-1.5 py-0.5 rounded bg-cyan-500/10 text-cyan-400">
-                      {connections.length} link{connections.length > 1 ? 's' : ''}
-                    </span>
-                  )}
-                  <span className="text-slate-500 text-xs">{isExpanded ? '\u25BE' : '\u25B8'}</span>
-                </div>
-              </div>
 
-              {/* Expanded Detail */}
-              {isExpanded && (
-                <div className="border-t border-[#1e2d44] px-4 py-3 bg-[#0a0f18]">
-                  {/* Full detail text */}
-                  {node.detail && (
-                    <div className="text-[12px] text-slate-300 leading-relaxed mb-3">{node.detail}</div>
-                  )}
-
-                  {/* Raw content preview for hypotheses */}
-                  {node.raw && (
-                    <div className="mb-3">
-                      <div className="text-[12px] text-slate-400 leading-relaxed p-3 rounded-lg bg-[#111b2a] border border-[#1e2d44] max-h-[200px] overflow-y-auto" style={{ scrollbarWidth: 'thin' }}>
-                        {renderMarkdown(node.raw.slice(0, 2000))}
-                      </div>
+                {/* Detail */}
+                <div className="px-4 py-3 border-b border-[#1e2d44]">
+                  {selected.detail && <div className="text-[12px] text-slate-400 leading-relaxed mb-2">{selected.detail}</div>}
+                  {selected.raw && (
+                    <div className="text-[11px] text-slate-400 leading-relaxed p-3 rounded-lg bg-[#111b2a] border border-[#1e2d44] max-h-[200px] overflow-y-auto mb-2" style={{ scrollbarWidth: 'thin' }}>
+                      {renderMarkdown(selected.raw.slice(0, 1500))}
                     </div>
                   )}
-
-                  {/* View full document button */}
-                  {node.filename && (
-                    <button
-                      onClick={() => loadDocument(node.filename!)}
-                      className="mb-3 w-full py-2 rounded-lg bg-cyan-500/10 text-cyan-400 text-[11px] font-bold hover:bg-cyan-500/20 transition-colors border border-cyan-500/20 font-mono"
-                    >
-                      VIEW FULL DOCUMENT — {node.filename}
+                  {selected.filename && (
+                    <button onClick={() => loadDocument(selected.filename!)}
+                      className="w-full py-2 rounded-lg bg-cyan-500/10 text-cyan-400 text-[11px] font-bold hover:bg-cyan-500/20 transition-colors border border-cyan-500/20 font-mono">
+                      VIEW FULL DOCUMENT
                     </button>
                   )}
-
-                  {/* Connections */}
-                  {connections.length > 0 && (
-                    <div>
-                      <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">
-                        CROSS-REFERENCES ({connections.length})
-                      </div>
-                      <div className="space-y-1">
-                        {connections.map((conn, i) => {
-                          const connColor = TYPE_COLORS[conn.type] || '#64748b';
-                          return (
-                            <div
-                              key={i}
-                              className="flex items-center gap-2.5 py-2 px-3 rounded-lg bg-[#111b2a] border border-[#1e2d44] cursor-pointer hover:bg-[#131f30] transition-colors"
-                              onClick={() => { setExpanded(conn.id); setFilter(null); }}
-                            >
-                              <span className="text-sm">{TYPE_ICONS[conn.type]}</span>
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2">
-                                  <span className="font-mono text-[9px]" style={{ color: connColor }}>{conn.id}</span>
-                                  <span className="text-[12px] text-slate-300 truncate">{conn.label}</span>
-                                </div>
-                                {conn.detail && <div className="text-[10px] text-slate-600 truncate">{conn.detail}</div>}
-                              </div>
-                              {conn.severity && <Badge level={conn.severity as any} small />}
-                              {conn.filename && (
-                                <button
-                                  onClick={(e) => { e.stopPropagation(); loadDocument(conn.filename!); }}
-                                  className="text-[9px] font-mono text-cyan-500 hover:text-cyan-400 px-2 py-0.5 border border-cyan-500/20 rounded hover:bg-cyan-500/10"
-                                >
-                                  DOC
-                                </button>
-                              )}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
-
-                  {connections.length === 0 && (
-                    <div className="text-[11px] text-slate-600 italic">No cross-references found for this item.</div>
-                  )}
                 </div>
-              )}
-            </div>
-          );
-        })}
 
-        {filteredNodes.length === 0 && (
-          <div className="text-center py-10 text-[12px] text-slate-600">
-            {filter ? `No ${filter} items found.` : 'No correlation data available.'}
-          </div>
-        )}
+                {/* Connections */}
+                {connections.length > 0 && (
+                  <div className="px-4 py-3">
+                    <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">CONNECTIONS ({connections.length})</div>
+                    <div className="space-y-1.5">
+                      {connections.map((conn, i) => {
+                        const connColor = TYPE_COLORS[conn.type] || '#64748b';
+                        return (
+                          <div key={i}
+                            className="flex items-center gap-2 py-2 px-2.5 rounded-lg bg-[#111b2a] border border-[#1e2d44] cursor-pointer hover:bg-[#131f30] transition-colors"
+                            onClick={() => setSelected(conn)}
+                          >
+                            <span className="text-sm">{TYPE_ICONS[conn.type]}</span>
+                            <div className="flex-1 min-w-0">
+                              <div className="font-mono text-[9px]" style={{ color: connColor }}>{conn.id}</div>
+                              <div className="text-[11px] text-slate-300 truncate">{conn.label}</div>
+                            </div>
+                            {conn.filename && (
+                              <button onClick={(e) => { e.stopPropagation(); loadDocument(conn.filename!); }}
+                                className="text-[8px] font-mono text-cyan-500 hover:text-cyan-400 px-1.5 py-0.5 border border-cyan-500/20 rounded hover:bg-cyan-500/10">
+                                DOC
+                              </button>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {connections.length === 0 && (
+                  <div className="px-4 py-6 text-center text-[11px] text-slate-600">No direct cross-references</div>
+                )}
+              </div>
+            );
+          })() : (
+            <div className="flex flex-col items-center justify-center h-full py-16 px-6">
+              <div className="text-3xl mb-4 opacity-20">{'\uD83D\uDD17'}</div>
+              <div className="text-[13px] text-slate-500 text-center mb-2">Click any node to explore</div>
+              <div className="text-[11px] text-slate-600 text-center leading-relaxed">
+                Cross-domain correlations across digital threats, geopolitical threats, hypotheses, pattern matches, shared entities, and allies.
+              </div>
+              <div className="mt-6 space-y-2 w-full">
+                {Object.entries(TYPE_COLORS).map(([type, color]) => {
+                  const count = nodes.filter(n => n.type === type).length;
+                  if (count === 0) return null;
+                  return (
+                    <div key={type} className="flex items-center gap-2 text-[10px]">
+                      <div className="w-3 h-3 rounded-full" style={{ backgroundColor: color }} />
+                      <span className="text-slate-400">{TYPE_LABELS[type] || type}</span>
+                      <span className="font-mono text-slate-600 ml-auto">{count}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
