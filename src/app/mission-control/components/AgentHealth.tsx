@@ -19,6 +19,7 @@ interface AgentStatus {
 const EXPECTED_INTERVALS: Record<string, number> = {
   clarion: 4,
   'mission-control': 6,
+  commander: 12,
   meridian: 24,
   axiom: 12,
   bastion: 24,

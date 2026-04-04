@@ -64,6 +64,7 @@ const REALM_ICONS: Record<string, string> = {
 const EXPECTED_INTERVALS: Record<string, number> = {
   clarion: 4,
   'mission-control': 6,
+  commander: 12,
   meridian: 24,
   axiom: 12,
   bastion: 24,
@@ -144,6 +145,7 @@ export default function AgentStatusTab() {
       clarion: ['clarion', 'clarion_intel_analyst', 'ClarionAgent'],
       'mission-control': ['mission-control', 'mcp', 'commander', 'COMMANDER', 'MCP'],
       meridian: ['meridian', 'MERIDIAN'],
+      commander: ['commander', 'COMMANDER'],
       axiom: ['axiom', 'AXIOM'],
       bastion: ['bastion', 'BASTION'],
       herald: ['herald', 'HERALD'],
