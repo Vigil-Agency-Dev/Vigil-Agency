@@ -22,3 +22,4 @@ export { default as CounterMeasuresTab } from './CounterMeasuresTab';
 export { default as DeadDropTab } from './DeadDropTab';
 export { default as CorrelationMapTab } from './CorrelationMapTab';
 export { default as AgentStatusTab } from './AgentStatusTab';
+export { default as VHBRTab } from './VHBRTab';

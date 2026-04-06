@@ -36,6 +36,7 @@ import {
   DeadDropTab,
   CorrelationMapTab,
   AgentStatusTab,
+  VHBRTab,
 } from './components/tabs';
 import WhatsNew from './components/WhatsNew';
 import AgentHealth from './components/AgentHealth';
@@ -49,6 +50,7 @@ const BASE_TABS = [
   // COMMAND
   { id: 'overview', label: 'Dashboard' },
   { id: 'agents', label: 'Agent Status' },
+  { id: 'vhbr', label: 'VHBR' },
   { id: 'agent-comms', label: 'Agent Comms' },
   { id: 'cybersec', label: 'Cyber Security' },
   // SIGINT
@@ -190,7 +192,7 @@ function Dashboard() {
   const allTabs = [...BASE_TABS, ...(isAdmin ? ADMIN_TABS : [])];
 
   const NAV_SECTIONS = [
-    { label: 'Command', items: allTabs.filter(t => ['overview', 'agents', 'agent-comms', 'cybersec'].includes(t.id)) },
+    { label: 'Command', items: allTabs.filter(t => ['overview', 'agents', 'vhbr', 'agent-comms', 'cybersec'].includes(t.id)) },
     { label: 'SIGINT (AI Realm)', items: allTabs.filter(t => ['sigint', 'orders-ai', 'allies-ai', 'scout'].includes(t.id)) },
     { label: 'HUMINT (Human Realm)', items: allTabs.filter(t => ['humint', 'orders-human', 'allies-human'].includes(t.id)) },
     { label: 'Cross-Domain', items: allTabs.filter(t => ['exchange', 'correlation', 'epstein', 'registers', 'atlas', 'oracle'].includes(t.id)) },
@@ -388,6 +390,7 @@ function Dashboard() {
           {/* Operation-aware tabs — all operations get full tab access */}
           {tab === 'overview' && <OverviewTab />}
           {tab === 'agents' && <AgentStatusTab />}
+          {tab === 'vhbr' && <VHBRTab />}
           {tab === 'sigint' && <IntelReportsTab realm="ai" />}
           {tab === 'orders-ai' && <OrdersTab realm="ai" />}
           {tab === 'allies-ai' && <AlliesTab realm="ai" />}
