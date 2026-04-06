@@ -38,6 +38,7 @@ import {
   AgentStatusTab,
   VHBRTab,
   SatIntTab,
+  GeointFeedsTab,
 } from './components/tabs';
 import WhatsNew from './components/WhatsNew';
 import AgentHealth from './components/AgentHealth';
@@ -69,6 +70,7 @@ const BASE_TABS = [
   { id: 'epstein', label: 'Epstein Intel' },
   { id: 'registers', label: 'Registers' },
   { id: 'satint', label: 'SATINT' },
+  { id: 'geoint-feeds', label: 'Data Feeds' },
   { id: 'atlas', label: 'ATLAS' },
   { id: 'oracle', label: 'ORACLE' },
   // ANALYSIS & DISTRIBUTION
@@ -198,7 +200,7 @@ function Dashboard() {
     { label: 'SIGINT (AI Realm)', items: allTabs.filter(t => ['sigint', 'orders-ai', 'allies-ai', 'scout'].includes(t.id)) },
     { label: 'HUMINT (Human Realm)', items: allTabs.filter(t => ['humint', 'orders-human', 'allies-human'].includes(t.id)) },
     { label: 'Cross-Domain', items: allTabs.filter(t => ['exchange', 'correlation', 'epstein', 'registers', 'oracle'].includes(t.id)) },
-    { label: 'GEOINT', items: allTabs.filter(t => ['satint', 'atlas'].includes(t.id)) },
+    { label: 'GEOINT', items: allTabs.filter(t => ['satint', 'geoint-feeds', 'atlas'].includes(t.id)) },
     { label: 'Analysis & Distribution', items: allTabs.filter(t => ['hypotheses', 'counter-measures', 'herald', 'distribution', 'impact'].includes(t.id)) },
     { label: 'Tools', items: allTabs.filter(t => ['dead-drop', 'timeline', 'notebook'].includes(t.id)) },
   ].filter(s => s.items.length > 0);
@@ -384,6 +386,7 @@ function Dashboard() {
           {tab === 'dead-drop' && <DeadDropTab />}
           {tab === 'correlation' && <CorrelationMapTab />}
           {tab === 'satint' && <SatIntTab />}
+          {tab === 'geoint-feeds' && <GeointFeedsTab />}
           {tab === 'registers' && <RegistersTab />}
           {tab === 'hypotheses' && <HypothesesTab />}
           {tab === 'herald' && <HeraldTab />}

@@ -24,3 +24,4 @@ export { default as CorrelationMapTab } from './CorrelationMapTab';
 export { default as AgentStatusTab } from './AgentStatusTab';
 export { default as VHBRTab } from './VHBRTab';
 export { default as SatIntTab } from './SatIntTab';
+export { default as GeointFeedsTab } from './GeointFeedsTab';
