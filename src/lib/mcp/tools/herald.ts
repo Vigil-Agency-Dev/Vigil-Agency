@@ -18,7 +18,8 @@ export const heraldTools: MCPTool[] = [
         subject: { type: 'string', description: 'Email subject line' },
         body: { type: 'string', description: 'Plain text email body' },
         html: { type: 'string', description: 'HTML email body (optional, overrides plain text in email clients that support HTML)' },
-        from_name: { type: 'string', description: 'Display name for sender (default: "VIGIL Agency"). Email is always from vigilops@proton.me.' },
+        from_name: { type: 'string', description: 'Display name for sender (default: "VIGIL Agency")' },
+        from_address: { type: 'string', enum: ['press', 'herald', 'ops', 'director', 'default'], description: 'Which @vigil-agency.com address to send from: press, herald, ops, director. Default: vigilops@proton.me' },
       },
       required: ['to', 'subject', 'body'],
     },
@@ -28,6 +29,7 @@ export const heraldTools: MCPTool[] = [
       body: args.body,
       html: args.html,
       from_name: args.from_name,
+      from_address: args.from_address,
     }),
   },
   {
