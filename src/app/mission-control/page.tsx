@@ -197,7 +197,8 @@ function Dashboard() {
     { label: 'Command', items: allTabs.filter(t => ['overview', 'agents', 'vhbr', 'agent-comms', 'cybersec'].includes(t.id)) },
     { label: 'SIGINT (AI Realm)', items: allTabs.filter(t => ['sigint', 'orders-ai', 'allies-ai', 'scout'].includes(t.id)) },
     { label: 'HUMINT (Human Realm)', items: allTabs.filter(t => ['humint', 'orders-human', 'allies-human'].includes(t.id)) },
-    { label: 'Cross-Domain', items: allTabs.filter(t => ['exchange', 'correlation', 'epstein', 'registers', 'satint', 'atlas', 'oracle'].includes(t.id)) },
+    { label: 'Cross-Domain', items: allTabs.filter(t => ['exchange', 'correlation', 'epstein', 'registers', 'oracle'].includes(t.id)) },
+    { label: 'GEOINT', items: allTabs.filter(t => ['satint', 'atlas'].includes(t.id)) },
     { label: 'Analysis & Distribution', items: allTabs.filter(t => ['hypotheses', 'counter-measures', 'herald', 'distribution', 'impact'].includes(t.id)) },
     { label: 'Tools', items: allTabs.filter(t => ['dead-drop', 'timeline', 'notebook'].includes(t.id)) },
   ].filter(s => s.items.length > 0);
