@@ -110,7 +110,7 @@ export default function SatIntTab() {
     setLoadingThumb(true);
     setThumbnailUrl(null);
     try {
-      const res = await fetch(`${VPS_API}/api/satint/thumbnail/${regionId}?days=${days}&width=640&height=640`, {
+      const res = await fetch(`${VPS_API}/api/satint/thumbnail/${regionId}?days=${days}&width=640&height=640&collection=${collection}`, {
         headers: { 'x-api-key': API_KEY },
       });
       if (res.ok) {
@@ -191,7 +191,7 @@ export default function SatIntTab() {
 
       {/* Controls */}
       <div className="flex items-center gap-3 flex-wrap">
-        <select value={collection} onChange={e => { setCollection(e.target.value); if (selectedRegion) searchImagery(selectedRegion); }}
+        <select value={collection} onChange={e => { setCollection(e.target.value); if (selectedRegion) { searchImagery(selectedRegion); setTimeout(() => loadThumbnail(selectedRegion), 100); } }}
           className="bg-[#111827] border border-[#2a3550] rounded-md py-1.5 px-3 text-[11px] text-slate-200 outline-none font-mono">
           <option value="sentinel-2-l2a">Sentinel-2 Optical</option>
           <option value="sentinel-1-grd">Sentinel-1 SAR (Radar)</option>
@@ -289,7 +289,7 @@ export default function SatIntTab() {
                     </div>
                   ) : (
                     <div className="text-center text-[12px] text-slate-600">
-                      {collection === 'sentinel-1-grd' ? 'SAR imagery requires Process API v2 (coming soon). Use Optical for visual preview.' : 'No imagery available for this region and time window.'}
+                      No imagery available for this region and time window. Try expanding the window.
                     </div>
                   )}
                 </div>
