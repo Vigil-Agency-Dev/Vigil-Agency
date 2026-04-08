@@ -105,11 +105,12 @@ export default function HypothesesTab() {
 
   if (loading) return <div className="text-center py-16 text-slate-500 text-sm">Loading hypotheses...</div>;
 
-  // Filter by current operation
+  // Filter out CONFIRMED (they live on the Findings page now) and filter by operation
   const filtered = hypotheses.filter(h => {
+    if (h.status.toUpperCase().includes('CONFIRMED')) return false;
     if (op.id === 'op-003') return h.id.startsWith('H-SC');
-    if (op.id === 'op-002') return !h.id.startsWith('H-SC'); // Lumen + Epstein share
-    return !h.id.startsWith('H-SC'); // Default: Lumen
+    if (op.id === 'op-002') return !h.id.startsWith('H-SC');
+    return !h.id.startsWith('H-SC');
   });
 
   // Group by base ID (strip version suffix) and sort by revision

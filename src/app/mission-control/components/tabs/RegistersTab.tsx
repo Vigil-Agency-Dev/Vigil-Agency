@@ -191,16 +191,20 @@ function HypothesesRegister() {
     <div className="space-y-3">
       <div className="flex items-center gap-2">
         <Dot color={isLive ? '#10b981' : '#f59e0b'} pulse={isLive} />
-        <span className="font-mono text-xs text-slate-400">{hypotheses.length} FORMAL HYPOTHESES</span>
+        <span className="font-mono text-xs text-slate-400">{hypotheses.length} HYPOTHESES &amp; FINDINGS</span>
       </div>
-      {hypotheses.map(h => (
-        <div key={h.id} className="bg-[#111b2a] border border-[#1e2d44] rounded-xl overflow-hidden" style={{ borderLeft: '3px solid #3b82f6' }}>
+      {hypotheses.map(h => {
+        const isConfirmed = h.status?.toUpperCase().includes('CONFIRMED');
+        const displayId = isConfirmed ? h.id.replace('H-', 'F-') : h.id;
+        const accentColor = isConfirmed ? '#f59e0b' : '#3b82f6';
+        return (
+        <div key={h.id} className="bg-[#111b2a] border border-[#1e2d44] rounded-xl overflow-hidden" style={{ borderLeft: `3px solid ${accentColor}` }}>
           <div className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-[#131f30] transition-colors" onClick={() => setExpanded(expanded === h.id ? null : h.id)}>
             <div className="flex-1">
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="font-mono text-[12px] font-bold text-cyan-400">{h.id}</span>
+                <span className="font-mono text-[12px] font-bold" style={{ color: isConfirmed ? '#f59e0b' : '#22d3ee' }}>{displayId}</span>
                 <span className="text-[14px] font-bold text-slate-200">{h.title}</span>
-                <span className="font-mono text-[10px] px-2 py-0.5 rounded bg-blue-500/10 text-blue-400">{h.status}</span>
+                <span className="font-mono text-[10px] px-2 py-0.5 rounded" style={{ background: `${accentColor}15`, color: accentColor }}>{isConfirmed ? 'CONFIRMED' : h.status}</span>
               </div>
               <div className="flex items-center gap-2 mt-1 text-[11px] text-slate-500">
                 <span>Analyst: <span className="text-purple-400">{h.analyst}</span></span>
@@ -235,7 +239,8 @@ function HypothesesRegister() {
             </div>
           )}
         </div>
-      ))}
+        );
+      })}
     </div>
   );
 }

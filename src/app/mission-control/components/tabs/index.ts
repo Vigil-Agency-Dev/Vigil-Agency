@@ -10,6 +10,7 @@ export { default as NotebookTab } from './NotebookTab';
 export { default as OracleTab } from './OracleTab';
 export { default as ConflictMapTab } from './ConflictMapTab';
 export { default as HypothesesTab } from './HypothesesTab';
+export { default as FindingsTab } from './FindingsTab';
 export { default as RegistersTab } from './RegistersTab';
 export { default as DistributionTab } from './DistributionTab';
 export { default as ImpactTab } from './ImpactTab';
