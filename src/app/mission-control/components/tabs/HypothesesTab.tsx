@@ -105,13 +105,16 @@ export default function HypothesesTab() {
 
   if (loading) return <div className="text-center py-16 text-slate-500 text-sm">Loading hypotheses...</div>;
 
-  // Filter out CONFIRMED (they live on the Findings page now) and filter by operation
+  // Keep all hypotheses including CONFIRMED (the hypothesis is the intellectual record)
+  // Filter only by operation
   const filtered = hypotheses.filter(h => {
-    if (h.status.toUpperCase().includes('CONFIRMED')) return false;
     if (op.id === 'op-003') return h.id.startsWith('H-SC');
     if (op.id === 'op-002') return !h.id.startsWith('H-SC');
     return !h.id.startsWith('H-SC');
   });
+
+  const isValidated = (status: string) =>
+    status.toUpperCase().includes('CONFIRMED') || status.toUpperCase().includes('VALIDATED');
 
   // Group by base ID (strip version suffix) and sort by revision
   const grouped = filtered.reduce<Record<string, Hypothesis[]>>((acc, h) => {
@@ -171,6 +174,11 @@ export default function HypothesesTab() {
                   <span className="font-mono text-[10px] px-2.5 py-0.5 rounded-full font-bold" style={{ background: `${color}15`, color, border: `1px solid ${color}30` }}>
                     {h.status}
                   </span>
+                  {isValidated(h.status) && (
+                    <span className="font-mono text-[10px] px-2.5 py-0.5 rounded-full font-bold" style={{ background: '#10b98115', color: '#10b981', border: '1px solid #10b98130' }}>
+                      VALIDATED WITH FINDING
+                    </span>
+                  )}
                   {hasRevisions && (
                     <span className="font-mono text-[9px] px-2 py-0.5 rounded bg-purple-500/10 text-purple-400">
                       v{getRevision(h.raw || '')} {versions.length > 1 ? `(${versions.length} revisions)` : ''}
@@ -189,6 +197,11 @@ export default function HypothesesTab() {
                     <span key={i} className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">{ref}</span>
                   ))}
                 </div>
+                {isValidated(h.status) && (
+                  <div className="mt-2 text-[11px] font-mono text-emerald-400/80">
+                    {'\u2714'} See <span className="font-bold">{h.id.replace('H-', 'F-')}</span> in Findings tab
+                  </div>
+                )}
               </div>
               <span className="text-slate-500 text-sm shrink-0 ml-3">{isExpanded ? '\u25BE' : '\u25B8'}</span>
             </div>
