@@ -54,6 +54,22 @@ function renderMarkdownBlock(raw: string) {
   });
 }
 
+function getFindingId(f: Finding): string {
+  // Try to extract from ID field
+  if (f.id && f.id.match(/H-\d+/)) return f.id.replace('H-', 'F-');
+  // Fallback: parse from filename (e.g. MERIDIAN_HYPOTHESIS_013_...)
+  const fnMatch = f.filename?.match(/HYPOTHESIS[_-](?:H-?)?(\d+)/i);
+  if (fnMatch) return `F-${fnMatch[1].replace(/^0+/, '')}`;
+  return 'F-???';
+}
+
+function getSourceHypothesisId(f: Finding): string {
+  if (f.id && f.id.match(/H-\d+/)) return f.id;
+  const fnMatch = f.filename?.match(/HYPOTHESIS[_-](?:H-?)?(\d+)/i);
+  if (fnMatch) return `H-${fnMatch[1].replace(/^0+/, '')}`;
+  return '';
+}
+
 function extractSourceCount(raw: string): number {
   const match = raw.match(/(\d+)\s*independent\s*source/i);
   return match ? parseInt(match[1]) : 0;
@@ -125,7 +141,7 @@ export default function FindingsTab() {
       </div>
 
       {findings.map(f => {
-        const findingId = f.id.replace('H-', 'F-');
+        const findingId = getFindingId(f);
         const sourceCount = extractSourceCount(f.raw || '');
         const evidenceTier = extractEvidenceTier(f.raw || '');
         const confirmedDate = extractConfirmationDate(f.raw || '');
@@ -166,7 +182,7 @@ export default function FindingsTab() {
                     </>
                   )}
                   <span>{'\u2022'}</span>
-                  <span>Graduated from {f.id}</span>
+                  <span>Graduated from <span className="text-cyan-400 font-semibold">{getSourceHypothesisId(f) || f.id || 'hypothesis'}</span></span>
                 </div>
                 <div className="flex gap-1.5 mt-2 flex-wrap">
                   {f.crossRef.map((ref, i) => (

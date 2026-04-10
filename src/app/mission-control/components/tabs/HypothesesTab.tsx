@@ -63,10 +63,26 @@ function renderMarkdownBlock(raw: string) {
   });
 }
 
-// Map hypothesis IDs to operations
-function getHypothesisOp(id: string): string {
-  if (id.startsWith('H-SC')) return 'op-003';
-  return 'op-001'; // H-001 to H-004 are Lumen/Epstein
+// Extract hypothesis number from ID or filename as fallback
+function getHypothesisNumber(h: Hypothesis): string {
+  if (h.id && h.id.match(/H-\d+/)) return h.id.match(/H-(\d+)/)?.[1] || '';
+  if (h.id && h.id.match(/H-SC/)) return h.id;
+  // Fallback: parse from filename (e.g. MERIDIAN_HYPOTHESIS_013_...)
+  const fnMatch = h.filename?.match(/HYPOTHESIS[_-](?:H-?)?(\d+)/i);
+  if (fnMatch) return fnMatch[1];
+  return '';
+}
+
+function getFindingId(h: Hypothesis): string {
+  const num = getHypothesisNumber(h);
+  if (!num) return '';
+  return `F-${num.replace(/^0+/, '')}`;
+}
+
+function getDisplayId(h: Hypothesis): string {
+  if (h.id && h.id.trim()) return h.id;
+  const num = getHypothesisNumber(h);
+  return num ? `H-${num.replace(/^0+/, '')}` : 'H-???';
 }
 
 // Extract revision number from raw content
@@ -169,7 +185,7 @@ export default function HypothesesTab() {
             >
               <div className="flex-1">
                 <div className="flex items-center gap-3 mb-1 flex-wrap">
-                  <span className="font-mono text-[13px] font-bold text-cyan-400">{h.id}</span>
+                  <span className="font-mono text-[13px] font-bold text-cyan-400">{getDisplayId(h)}</span>
                   <span className="text-[15px] font-bold text-slate-200">{h.title}</span>
                   <span className="font-mono text-[10px] px-2.5 py-0.5 rounded-full font-bold" style={{ background: `${color}15`, color, border: `1px solid ${color}30` }}>
                     {h.status}
@@ -197,9 +213,9 @@ export default function HypothesesTab() {
                     <span key={i} className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">{ref}</span>
                   ))}
                 </div>
-                {isValidated(h.status) && (
+                {isValidated(h.status) && getFindingId(h) && (
                   <div className="mt-2 text-[11px] font-mono text-emerald-400/80">
-                    {'\u2714'} See <span className="font-bold">{h.id.replace('H-', 'F-')}</span> in Findings tab
+                    {'\u2714'} See <span className="font-bold">{getFindingId(h)}</span> in Findings tab
                   </div>
                 )}
               </div>
