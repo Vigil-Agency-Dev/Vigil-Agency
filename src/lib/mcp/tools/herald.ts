@@ -51,6 +51,28 @@ export const heraldTools: MCPTool[] = [
     handler: async () => vpsGet('/api/herald/registry'),
   },
   {
+    name: 'check_herald_inbox',
+    description: 'Check the HERALD inbound email inbox (Proton Mail). Returns recent emails received across all VIGIL addresses. Use to monitor replies from journalists, contacts, and external parties.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        limit: { type: 'number', description: 'Max emails to return (default 30, max 100)' },
+        unread_only: { type: 'boolean', description: 'Only return unread/unseen emails (default false)' },
+        since: { type: 'string', description: 'Only return emails after this ISO date (e.g. "2026-04-06"). Default: last 7 days' },
+        folder: { type: 'string', description: 'Mailbox folder to check (default "INBOX"). Options: INBOX, Sent, Archive, Spam, Trash' },
+      },
+      required: [],
+    },
+    handler: async (args) => vpsGet(
+      '/api/herald/inbox?' + new URLSearchParams({
+        ...(args.limit != null && { limit: String(args.limit) }),
+        ...(args.unread_only != null && { unread_only: String(args.unread_only) }),
+        ...(args.since ? { since: String(args.since) } : {}),
+        ...(args.folder ? { folder: String(args.folder) } : {}),
+      }).toString()
+    ),
+  },
+  {
     name: 'review_herald_package',
     description: 'Submit a DIRECTOR review decision on a HERALD distribution package (approve or hold).',
     inputSchema: {
