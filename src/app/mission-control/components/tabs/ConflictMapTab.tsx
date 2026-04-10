@@ -2,6 +2,9 @@
 
 import React, { useState, useEffect } from 'react';
 import { Dot, Card, Badge } from '../ui';
+import dynamic from 'next/dynamic';
+
+const AtlasMap = dynamic(() => import('./AtlasMap'), { ssr: false });
 
 const VPS_API = process.env.NEXT_PUBLIC_VPS_ENDPOINT || 'https://ops.jr8ch.com';
 const API_KEY = process.env.NEXT_PUBLIC_VIGIL_API_KEY || '';
@@ -120,6 +123,7 @@ export default function ConflictMapTab() {
   const [thermal, setThermal] = useState<ThermalDetection[]>([]);
   const [status, setStatus] = useState<AtlasStatus>({ pipeline: {}, ais: {}, feeds: {} });
   const [events, setEvents] = useState<ConflictEvent[]>([]);
+  const [infrastructure, setInfrastructure] = useState<any[]>([]);
   const [report, setReport] = useState<string | null>(null);
   const [isLive, setIsLive] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<string | null>(null);
@@ -131,7 +135,7 @@ export default function ConflictMapTab() {
     if (!API_KEY) return;
     async function load() {
       try {
-        const [oilRes, aisRes, darkRes, anomRes, thermalRes, statusRes, eventsRes, reportRes] = await Promise.all([
+        const [oilRes, aisRes, darkRes, anomRes, thermalRes, statusRes, eventsRes, infraRes, reportRes] = await Promise.all([
           fetch(`${VPS_API}/api/atlas/oil`, { headers }).catch(() => null),
           fetch(`${VPS_API}/api/atlas/ais`, { headers }).catch(() => null),
           fetch(`${VPS_API}/api/atlas/ais/dark`, { headers }).catch(() => null),
@@ -139,6 +143,7 @@ export default function ConflictMapTab() {
           fetch(`${VPS_API}/api/atlas/thermal`, { headers }).catch(() => null),
           fetch(`${VPS_API}/api/atlas/status`, { headers }).catch(() => null),
           fetch(`${VPS_API}/api/atlas/events`, { headers }).catch(() => null),
+          fetch(`${VPS_API}/api/atlas/infrastructure`, { headers }).catch(() => null),
           fetch(`${VPS_API}/api/atlas/report`, { headers }).catch(() => null),
         ]);
 
@@ -149,6 +154,7 @@ export default function ConflictMapTab() {
         if (thermalRes?.ok) { const d = await thermalRes.json(); setThermal(d.detections || []); }
         if (statusRes?.ok) { const d = await statusRes.json(); setStatus(d); }
         if (eventsRes?.ok) { const d = await eventsRes.json(); setEvents((d.events || []).slice(0, 50)); }
+        if (infraRes?.ok) { const d = await infraRes.json(); setInfrastructure(d.features || []); }
         if (reportRes?.ok) { const d = await reportRes.json(); setReport(d.report || null); }
 
         setIsLive(true);
@@ -199,6 +205,15 @@ export default function ConflictMapTab() {
           </div>
         ))}
       </div>
+
+      {/* Interactive 3D/2D Map */}
+      <AtlasMap
+        infrastructure={infrastructure}
+        vessels={vessels}
+        thermal={thermal}
+        events={events}
+        darkAlerts={darkAlerts}
+      />
 
       {/* Oil Futures + AIS Status Row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
