@@ -41,3 +41,6 @@ next-env.d.ts
 
 # Local Netlify folder
 .netlify
+
+# Claude Code workspace (build artifacts, audit drafts, patch scripts)
+.claude/
