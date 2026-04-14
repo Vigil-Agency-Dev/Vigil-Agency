@@ -90,4 +90,56 @@ export const heraldTools: MCPTool[] = [
       notes: args.notes || '',
     }),
   },
+  {
+    name: 'send_herald_signal',
+    description: 'Send a Signal message via HERALD (signal-cli daemon on VPS). Uses the "Josh - Lumina Research" Signal identity (+61437087042). For autonomous research/peer-review correspondence on Signal. All messages logged to herald-signal-log/outbox in dead-drop.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        to: {
+          oneOf: [
+            { type: 'string', description: 'Recipient phone number in E.164 format (e.g. "+61476300498") or Australian format ("0476300498" — will be normalised)' },
+            { type: 'array', items: { type: 'string' }, description: 'Multiple recipient phone numbers' },
+          ],
+          description: 'Recipient(s). Single number or array.',
+        },
+        message: { type: 'string', description: 'Signal message body (plain text). Keep concise and professional — this is the research/peer-review identity.' },
+      },
+      required: ['to', 'message'],
+    },
+    handler: async (args) => vpsPost('/api/herald/signal/send', {
+      to: args.to,
+      message: args.message,
+    }),
+  },
+  {
+    name: 'check_herald_signal',
+    description: 'Check the HERALD Signal inbox. Returns recent inbound Signal messages received by the "Josh - Lumina Research" identity. Use to monitor replies from research/peer-review contacts.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        limit: { type: 'number', description: 'Max messages to return (default 50, max 200)' },
+        since: { type: 'string', description: 'Only return messages after this ISO date (e.g. "2026-04-14"). Default: last 7 days' },
+      },
+      required: [],
+    },
+    handler: async (args) => vpsGet(
+      '/api/herald/signal/inbox?' + new URLSearchParams({
+        ...(args.limit != null && { limit: String(args.limit) }),
+        ...(args.since ? { since: String(args.since) } : {}),
+      }).toString()
+    ),
+  },
+  {
+    name: 'get_herald_signal_status',
+    description: 'Get the HERALD Signal daemon health status, account info, and connection state.',
+    inputSchema: { type: 'object', properties: {}, required: [] },
+    handler: async () => vpsGet('/api/herald/signal/status'),
+  },
+  {
+    name: 'get_herald_signal_log',
+    description: 'Get the HERALD Signal audit trail summary — total messages sent and received via the Signal identity.',
+    inputSchema: { type: 'object', properties: {}, required: [] },
+    handler: async () => vpsGet('/api/herald/signal/log'),
+  },
 ];
