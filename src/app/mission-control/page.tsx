@@ -27,6 +27,7 @@ import {
   FindingsTab,
   RegistersTab,
   DistributionTab,
+  ReviewRegisterTab,
   ImpactTab,
   CyberSecTab,
   HeraldTab,
@@ -80,6 +81,7 @@ const BASE_TABS = [
   { id: 'counter-measures', label: 'Counter-Measures' },
   { id: 'herald', label: 'HERALD' },
   { id: 'distribution', label: 'Distribution Planning' },
+  { id: 'review-register', label: 'Review & Approve' },
   { id: 'impact', label: 'Impact Monitor' },
   // TOOLS
   { id: 'dead-drop', label: 'Dead Drop' },
@@ -203,7 +205,7 @@ function Dashboard() {
     { label: 'HUMINT (Human Realm)', items: allTabs.filter(t => ['humint', 'orders-human', 'allies-human'].includes(t.id)) },
     { label: 'Cross-Domain', items: allTabs.filter(t => ['exchange', 'correlation', 'epstein', 'registers', 'oracle'].includes(t.id)) },
     { label: 'GEOINT', items: allTabs.filter(t => ['satint', 'geoint-feeds', 'atlas'].includes(t.id)) },
-    { label: 'Analysis & Distribution', items: allTabs.filter(t => ['hypotheses', 'findings', 'counter-measures', 'herald', 'distribution', 'impact'].includes(t.id)) },
+    { label: 'Analysis & Distribution', items: allTabs.filter(t => ['hypotheses', 'findings', 'counter-measures', 'herald', 'distribution', 'review-register', 'impact'].includes(t.id)) },
     { label: 'Tools', items: allTabs.filter(t => ['dead-drop', 'timeline', 'notebook'].includes(t.id)) },
   ].filter(s => s.items.length > 0);
 
@@ -394,6 +396,7 @@ function Dashboard() {
           {tab === 'findings' && <FindingsTab />}
           {tab === 'herald' && <HeraldTab />}
           {tab === 'distribution' && <DistributionTab />}
+          {tab === 'review-register' && <ReviewRegisterTab />}
           {tab === 'impact' && <ImpactTab />}
           {tab === 'oracle' && <OracleTab />}
           {tab === 'atlas' && <ConflictMapTab />}
