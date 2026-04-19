@@ -7,13 +7,18 @@
 const VPS_API = process.env.NEXT_PUBLIC_VPS_ENDPOINT || 'https://ops.jr8ch.com';
 const API_KEY = process.env.NEXT_PUBLIC_VIGIL_API_KEY || '';
 
+// Canonical scan folders per COMMANDER standing order §2.A
+// (standing-orders/COMMANDER-FRONTMATTER-CONVENTION-20260419.md)
 export const SCAN_FOLDERS = [
   'orders-for-herald',
   'orders-for-director',
   'orders-for-cvs',
   'orders-for-commander',
+  'orders-for-axiom',
+  'orders-for-cairn',
   'commander-recommendations',
   'escalations',
+  'standing-orders',
 ];
 
 export type DirectorStatus =
