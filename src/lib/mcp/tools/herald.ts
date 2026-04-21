@@ -142,4 +142,59 @@ export const heraldTools: MCPTool[] = [
     inputSchema: { type: 'object', properties: {}, required: [] },
     handler: async () => vpsGet('/api/herald/signal/log'),
   },
+  {
+    name: 'list_herald_attachments',
+    description: 'List all attachments on a specific inbox email (metadata only — filename, contentType, size, contentId). Use the uid from check_herald_inbox results. Attachments are zero-indexed and that index is what download_herald_attachment and read_herald_attachment expect.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        uid: { type: 'number', description: 'IMAP uid of the email (from check_herald_inbox results)' },
+        folder: { type: 'string', description: 'Mailbox folder (default "INBOX"). Must match the folder used when the uid was discovered — IMAP uids are folder-scoped.' },
+      },
+      required: ['uid'],
+    },
+    handler: async (args) => vpsGet(
+      `/api/herald/inbox/${encodeURIComponent(String(args.uid))}/attachments?` + new URLSearchParams({
+        ...(args.folder ? { folder: String(args.folder) } : {}),
+      }).toString()
+    ),
+  },
+  {
+    name: 'download_herald_attachment',
+    description: 'Download a single attachment from an inbox email as base64-encoded bytes. Returns filename, contentType, size, and content_base64. Use when you need the raw file (e.g. to archive, forward, or process locally). For reading text content from PDFs/docx/text files, prefer read_herald_attachment which extracts text server-side.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        uid: { type: 'number', description: 'IMAP uid of the email' },
+        index: { type: 'number', description: 'Zero-based attachment index (from list_herald_attachments)' },
+        folder: { type: 'string', description: 'Mailbox folder (default "INBOX")' },
+      },
+      required: ['uid', 'index'],
+    },
+    handler: async (args) => vpsGet(
+      `/api/herald/inbox/${encodeURIComponent(String(args.uid))}/attachments/${encodeURIComponent(String(args.index))}?` + new URLSearchParams({
+        ...(args.folder ? { folder: String(args.folder) } : {}),
+      }).toString()
+    ),
+  },
+  {
+    name: 'read_herald_attachment',
+    description: 'Extract and return the text content of an attachment. Supported: PDF (pdf-parse, returns text + page_count), .docx (mammoth), text/markdown/csv/json/xml/html/eml (UTF-8). Images, spreadsheets (.xlsx), and other binary types return HTTP 415 — fall back to download_herald_attachment for those. Returns { text, extraction_method, char_count, truncated, page_count? }.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        uid: { type: 'number', description: 'IMAP uid of the email' },
+        index: { type: 'number', description: 'Zero-based attachment index (from list_herald_attachments)' },
+        folder: { type: 'string', description: 'Mailbox folder (default "INBOX")' },
+        max_chars: { type: 'number', description: 'Max characters of extracted text to return (default 50000, hard cap 500000). Output is truncated and flagged truncated:true if the full text exceeds this.' },
+      },
+      required: ['uid', 'index'],
+    },
+    handler: async (args) => vpsGet(
+      `/api/herald/inbox/${encodeURIComponent(String(args.uid))}/attachments/${encodeURIComponent(String(args.index))}/text?` + new URLSearchParams({
+        ...(args.folder ? { folder: String(args.folder) } : {}),
+        ...(args.max_chars != null ? { max_chars: String(args.max_chars) } : {}),
+      }).toString()
+    ),
+  },
 ];
