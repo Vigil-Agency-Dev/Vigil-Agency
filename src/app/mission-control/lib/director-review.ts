@@ -34,6 +34,14 @@ export type DirectorStatus =
 
 export type DirectorAction = 'AUTHORISE' | 'AUTHORISE_WITH_AMENDMENTS' | 'REJECT' | 'RETURN';
 
+// Herald packages use a distinct action vocabulary (legacy /api/herald/review contract).
+export type HeraldAction = 'approve' | 'hold' | 'reject';
+
+// Items come from two sources:
+//  - 'dead-drop': markdown files in scan folders with director_review: true frontmatter
+//  - 'herald-package': HERALD distribution packages from /api/herald/packages
+export type PendingSource = 'dead-drop' | 'herald-package';
+
 export type Urgency = 'ROUTINE' | 'ELEVATED' | 'CRITICAL' | 'HARD_STOP';
 
 export interface PendingItem {
@@ -55,6 +63,10 @@ export interface PendingItem {
   frontmatter: Record<string, any>;
   sizeBytes?: number;
   modified?: string;
+  // Source discriminator — drives which submit path and which action verbs apply.
+  source: PendingSource;
+  // For herald-package items, raw body content is pre-fetched (packages ship with content).
+  prefetchedBody?: string;
 }
 
 export interface ReviewRegisterData {
@@ -140,6 +152,67 @@ export async function fetchFileBody(path: string): Promise<string> {
   return readFileContent(path);
 }
 
+// Extract OP-XXX tag from a HERALD package filename (OP004, OP-001, etc.).
+function extractOpTag(filename: string): string | null {
+  const m = filename.match(/OP-?(\d{3,4})/i);
+  if (!m) return null;
+  const n = m[1];
+  return n.length === 4 ? `OP-${n.slice(0, 3)}` : `OP-${n}`;
+}
+
+// Map Herald review action to DirectorStatus for the history view.
+function heraldActionToStatus(action: string): DirectorStatus {
+  if (action === 'approve') return 'AUTHORISED';
+  if (action === 'hold') return 'HELD';
+  if (action === 'reject') return 'REJECTED';
+  return 'CLOSED';
+}
+
+// Fetch HERALD packages + reviews and synthesize PendingItems.
+// Pending = package without a review entry. History = package with a review entry.
+async function fetchHeraldItems(): Promise<PendingItem[]> {
+  const [pkgRes, revRes] = await Promise.all([
+    fetch(`${VPS_API}/api/herald/packages`, { headers: authHeaders(), cache: 'no-store' }).catch(() => null),
+    fetch(`${VPS_API}/api/herald/reviews`, { headers: authHeaders(), cache: 'no-store' }).catch(() => null),
+  ]);
+  if (!pkgRes?.ok) return [];
+  const pkgData = await pkgRes.json();
+  const packages: Array<{ filename: string; content?: string; modified?: string }> = pkgData.packages || [];
+  const reviews: Array<{ filename: string; action: string; notes?: string; reviewedBy?: string; reviewedAt?: string }> = revRes?.ok
+    ? ((await revRes.json()).reviews || [])
+    : [];
+  const reviewsByFile = new Map(reviews.map(r => [r.filename, r]));
+
+  return packages.map(pkg => {
+    const review = reviewsByFile.get(pkg.filename);
+    const opTag = extractOpTag(pkg.filename);
+    const content = typeof pkg.content === 'string' ? pkg.content : '';
+    const title = pkg.filename.replace(/\.(md|json)$/i, '').replace(/-/g, ' ');
+    const status: DirectorStatus = review ? heraldActionToStatus(review.action) : 'PROSPECTIVE';
+    return {
+      path: `herald-packages/${pkg.filename}`,
+      folder: 'herald-packages',
+      filename: pkg.filename,
+      title,
+      summary: content.slice(0, 200) || title,
+      filedBy: 'HERALD',
+      filedAt: pkg.modified,
+      operation: opTag,
+      status,
+      actionRequired: review ? null : 'DIRECTOR_DISTRIBUTION_GATE',
+      reservedGateRef: null,
+      urgency: review ? 'ROUTINE' : 'ELEVATED',
+      heldPending: review?.action === 'hold' ? (review.notes || 'HERALD HOLD') : null,
+      supersedes: null,
+      supersededBy: null,
+      frontmatter: { herald_review: true, review: review || null },
+      modified: pkg.modified,
+      source: 'herald-package',
+      prefetchedBody: content,
+    } as PendingItem;
+  });
+}
+
 // Try the real server endpoint first, fall back to client-side scan.
 export async function fetchPendingReview(): Promise<ReviewRegisterData> {
   const t0 = Date.now();
@@ -206,6 +279,7 @@ export async function fetchPendingReview(): Promise<ReviewRegisterData> {
             frontmatter: fm,
             sizeBytes: file.size,
             modified: file.modified,
+            source: 'dead-drop',
           };
           allItems.push(item);
         } catch (err: any) {
@@ -218,6 +292,16 @@ export async function fetchPendingReview(): Promise<ReviewRegisterData> {
   for (let i = 0; i < queue.length; i += BATCH) {
     await Promise.all(queue.slice(i, i + BATCH).map(fn => fn()));
   }
+
+  // Second source: HERALD distribution packages awaiting DIRECTOR review.
+  // Packages are a separate VPS datastore from dead-drop. Every package without
+  // a matching review entry is surfaced as a pending item; reviewed packages
+  // land in history with the mapped director status.
+  const heraldItems = await fetchHeraldItems().catch(err => {
+    errors.push(`herald: ${err.message}`);
+    return [] as PendingItem[];
+  });
+  allItems.push(...heraldItems);
 
   const pending = allItems.filter(i => PENDING_STATUSES.includes(i.status));
   const history = allItems.filter(i => HISTORY_STATUSES.includes(i.status));
@@ -375,8 +459,42 @@ async function writeFile(path: string, content: string): Promise<void> {
   if (!res.ok) throw new Error(`write ${res.status}: ${path}`);
 }
 
-// Submit an action. Attempts POST /api/director/action first; falls back to client shim.
+// Map a DirectorAction to the HERALD review vocabulary.
+function directorActionToHerald(action: DirectorAction): HeraldAction {
+  if (action === 'AUTHORISE') return 'approve';
+  if (action === 'REJECT') return 'reject';
+  // AUTHORISE_WITH_AMENDMENTS and RETURN both map to HOLD on the HERALD side —
+  // amendments/return reason become the review notes so HERALD sees context.
+  return 'hold';
+}
+
+// Submit a HERALD package action via /api/herald/review.
+async function submitHeraldAction(payload: ActionPayload, orig: PendingItem | null): Promise<ActionResult> {
+  const heraldAction = directorActionToHerald(payload.action);
+  const notes = payload.amendments || payload.reason || '';
+  try {
+    const res = await fetch(`${VPS_API}/api/herald/review`, {
+      method: 'POST',
+      headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ filename: orig?.filename || payload.path.replace(/^herald-packages\//, ''), action: heraldAction, notes }),
+    });
+    if (!res.ok) {
+      const errText = await res.text();
+      return { success: false, error: `herald ${res.status}: ${errText}`, serverAction: true };
+    }
+    return { success: true, originalStatus: heraldActionToStatus(heraldAction), serverAction: true };
+  } catch (err: any) {
+    return { success: false, error: `herald submit failed: ${err.message}`, serverAction: true };
+  }
+}
+
+// Submit an action. Routes to HERALD endpoint for herald-package items,
+// otherwise the dead-drop director path (real endpoint or client shim).
 export async function submitDirectorAction(payload: ActionPayload, orig: PendingItem | null): Promise<ActionResult> {
+  if (orig?.source === 'herald-package') {
+    return submitHeraldAction(payload, orig);
+  }
+
   const reviewedAt = new Date();
 
   // Try real server endpoint
@@ -451,7 +569,14 @@ export async function submitDirectorAction(payload: ActionPayload, orig: Pending
 }
 
 // Convenience: fetch a single file's frontmatter + body (used by modal).
-export async function fetchFrontmatterAndBody(path: string): Promise<{ frontmatter: Record<string, any>; body: string; raw: string }> {
+// For herald-package items we accept a PendingItem so we can return the
+// already-fetched package body without a dead-drop round trip.
+export async function fetchFrontmatterAndBody(pathOrItem: string | PendingItem): Promise<{ frontmatter: Record<string, any>; body: string; raw: string }> {
+  if (typeof pathOrItem !== 'string' && pathOrItem.source === 'herald-package') {
+    const body = pathOrItem.prefetchedBody || '';
+    return { frontmatter: pathOrItem.frontmatter, body, raw: body };
+  }
+  const path = typeof pathOrItem === 'string' ? pathOrItem : pathOrItem.path;
   const raw = await readFileContent(path);
   const parsed = parseFrontmatter(raw);
   if (parsed) return { ...parsed, raw };

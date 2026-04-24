@@ -72,11 +72,11 @@ function ActionModal({
 
   useEffect(() => {
     setLoadingBody(true);
-    fetchFrontmatterAndBody(item.path)
+    fetchFrontmatterAndBody(item)
       .then(d => setBody(d.body))
       .catch(err => setBody(`Failed to load: ${err.message}`))
       .finally(() => setLoadingBody(false));
-  }, [item.path]);
+  }, [item]);
 
   async function handleSubmit() {
     if (!action) return;
@@ -121,6 +121,7 @@ function ActionModal({
               <Badge color={STATUS_COLOR[item.status] || '#64748b'} bold>{item.status}</Badge>
               {item.urgency !== 'ROUTINE' && <Badge color={URGENCY_COLOR[item.urgency]} bold>{item.urgency}</Badge>}
               {item.operation && <Badge color="#06b6d4">{item.operation}</Badge>}
+              {item.source === 'herald-package' && <Badge color="#ec4899" bold>HERALD DISTRIBUTION</Badge>}
               {item.filedBy && <span className="font-mono text-[10px] text-slate-500">filed by {item.filedBy}</span>}
               {item.filedAt && <span className="font-mono text-[10px] text-slate-500">{formatAESTShort(item.filedAt)}</span>}
             </div>
@@ -174,20 +175,34 @@ function ActionModal({
           <div className="text-[11px] font-bold text-slate-300 uppercase tracking-wider mb-3">DIRECTOR Action</div>
 
           {!action && (
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-              <button onClick={() => setAction('AUTHORISE')} className="py-2.5 rounded-lg bg-green-500/10 text-green-400 text-[12px] font-bold hover:bg-green-500/20 border border-green-500/20">
-                {'\u2713'} AUTHORISE
-              </button>
-              <button onClick={() => setAction('AUTHORISE_WITH_AMENDMENTS')} className="py-2.5 rounded-lg bg-cyan-500/10 text-cyan-400 text-[12px] font-bold hover:bg-cyan-500/20 border border-cyan-500/20">
-                {'\u270E'} AUTHORISE + AMEND
-              </button>
-              <button onClick={() => setAction('RETURN')} className="py-2.5 rounded-lg bg-amber-500/10 text-amber-400 text-[12px] font-bold hover:bg-amber-500/20 border border-amber-500/20">
-                {'\u21A9'} RETURN
-              </button>
-              <button onClick={() => setAction('REJECT')} className="py-2.5 rounded-lg bg-red-500/10 text-red-400 text-[12px] font-bold hover:bg-red-500/20 border border-red-500/20">
-                {'\u2715'} REJECT
-              </button>
-            </div>
+            item.source === 'herald-package' ? (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                <button onClick={() => setAction('AUTHORISE')} className="py-2.5 rounded-lg bg-green-500/10 text-green-400 text-[12px] font-bold hover:bg-green-500/20 border border-green-500/20">
+                  {'\u2713'} APPROVE FOR DISTRIBUTION
+                </button>
+                <button onClick={() => setAction('AUTHORISE_WITH_AMENDMENTS')} className="py-2.5 rounded-lg bg-amber-500/10 text-amber-400 text-[12px] font-bold hover:bg-amber-500/20 border border-amber-500/20">
+                  {'\u270B'} HOLD FOR REVISIONS
+                </button>
+                <button onClick={() => setAction('REJECT')} className="py-2.5 rounded-lg bg-red-500/10 text-red-400 text-[12px] font-bold hover:bg-red-500/20 border border-red-500/20">
+                  {'\u2715'} REJECT
+                </button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                <button onClick={() => setAction('AUTHORISE')} className="py-2.5 rounded-lg bg-green-500/10 text-green-400 text-[12px] font-bold hover:bg-green-500/20 border border-green-500/20">
+                  {'\u2713'} AUTHORISE
+                </button>
+                <button onClick={() => setAction('AUTHORISE_WITH_AMENDMENTS')} className="py-2.5 rounded-lg bg-cyan-500/10 text-cyan-400 text-[12px] font-bold hover:bg-cyan-500/20 border border-cyan-500/20">
+                  {'\u270E'} AUTHORISE + AMEND
+                </button>
+                <button onClick={() => setAction('RETURN')} className="py-2.5 rounded-lg bg-amber-500/10 text-amber-400 text-[12px] font-bold hover:bg-amber-500/20 border border-amber-500/20">
+                  {'\u21A9'} RETURN
+                </button>
+                <button onClick={() => setAction('REJECT')} className="py-2.5 rounded-lg bg-red-500/10 text-red-400 text-[12px] font-bold hover:bg-red-500/20 border border-red-500/20">
+                  {'\u2715'} REJECT
+                </button>
+              </div>
+            )
           )}
 
           {action && (
@@ -290,6 +305,7 @@ function PendingCard({ item, onOpen }: { item: PendingItem; onOpen: () => void }
             <Badge color={statusColor} bold>{item.status}</Badge>
             {item.urgency !== 'ROUTINE' && <Badge color={URGENCY_COLOR[item.urgency]} bold>{item.urgency}</Badge>}
             {item.operation && <Badge color="#06b6d4">{item.operation}</Badge>}
+            {item.source === 'herald-package' && <Badge color="#ec4899" bold>HERALD</Badge>}
             {item.actionRequired && <span className="font-mono text-[10px] text-cyan-400">{item.actionRequired.replace(/_/g, ' ')}</span>}
           </div>
           <div className="text-[13px] font-semibold text-slate-100 leading-snug">{item.title}</div>
@@ -361,10 +377,10 @@ export default function ReviewRegisterTab() {
       <div className="p-5 bg-gradient-to-r from-red-500/[.06] to-purple-500/[.04] border border-red-500/20 rounded-xl">
         <h2 className="text-base font-bold text-red-400 mb-2" style={{ fontFamily: "'JetBrains Mono', monospace" }}>DIRECTOR-RESERVED ACTION QUEUE</h2>
         <p className="text-[13px] text-slate-300 leading-relaxed">
-          Every DIRECTOR-actionable artefact across the dead-drop surfaces here — distribution directives, commander recommendations, escalations, reserved-gate decisions. Authorise, authorise with amendments, return for info, or reject. All actions file a reply file adjacent to the original and notify COMMANDER via team report.
+          Every DIRECTOR-actionable artefact across dead-drop AND HERALD distribution surfaces here — distribution directives, commander recommendations, escalations, reserved-gate decisions, and HERALD distribution packages awaiting approval. Authorise, authorise with amendments / hold for revisions, return for info, or reject. HERALD and Distribution Planning retain their own audit views — this is the single triage inbox.
         </p>
         <p className="text-[11px] text-slate-500 mt-2">
-          Scan convention: YAML frontmatter <code className="text-cyan-400">director_review: true</code>. Items without frontmatter are not scanned (safe default). Reply files carry <code className="text-cyan-400">director_review: false</code> and never recurse.
+          Sources: (1) dead-drop markdown with YAML frontmatter <code className="text-cyan-400">director_review: true</code>; (2) HERALD packages from <code className="text-cyan-400">/api/herald/packages</code> without a matching review entry. HERALD actions route via <code className="text-cyan-400">/api/herald/review</code>; dead-drop actions file reply files adjacent to the original.
         </p>
       </div>
 
