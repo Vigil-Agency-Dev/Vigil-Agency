@@ -15,16 +15,17 @@ interface AgentStatus {
   lastActivity?: string;
 }
 
-// Expected heartbeat intervals per agent (hours)
+// Expected heartbeat intervals per agent (hours).
+// Twice-daily cadence = 12h for agents on the standard cron.
 const EXPECTED_INTERVALS: Record<string, number> = {
-  clarion: 4,
-  'mission-control': 6,
+  clarion: 12,
+  'mission-control': 12,
   commander: 12,
   meridian: 24,
   axiom: 12,
   bastion: 24,
   herald: 48,
-  cairn: 24,
+  cairn: 12,
 };
 
 function getHealthColor(agentId: string, lastTime: string | undefined): string {
