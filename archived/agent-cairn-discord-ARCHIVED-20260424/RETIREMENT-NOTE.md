@@ -1,0 +1,1 @@
+Discord architecture retired 2026-04-24. Platform mismatch: Discord's admin-invite gate architecture incompatible with VIGIL's autonomous-field-operative design. CAIRN being rebuilt on Telegram. This code kept for reference — system-prompt, Intel Analyst sub-loop pattern, MRP implementation, heartbeat sync code, and dead-drop integration all carry forward to Telegram rebuild.

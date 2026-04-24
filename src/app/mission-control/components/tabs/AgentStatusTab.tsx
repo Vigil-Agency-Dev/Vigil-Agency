@@ -67,10 +67,8 @@ const EXPECTED_INTERVALS: Record<string, number> = {
   'mission-control': 12,
   commander: 12,
   meridian: 24,
-  axiom: 12,
   bastion: 24,
   herald: 48,
-  cairn: 12,
 };
 
 function timeSince(iso: string): string {
@@ -147,10 +145,8 @@ export default function AgentStatusTab() {
       'mission-control': ['mission-control', 'mcp', 'commander', 'COMMANDER', 'MCP'],
       meridian: ['meridian', 'MERIDIAN'],
       commander: ['commander', 'COMMANDER'],
-      axiom: ['axiom', 'AXIOM'],
       bastion: ['bastion', 'BASTION'],
       herald: ['herald', 'HERALD'],
-      cairn: ['cairn', 'CAIRN', 'cairn_intel_analyst', 'CAIRN_INTEL_ANALYST'],
     };
     const names = idMap[agentId] || [agentId];
     return teamReports.find(r => names.some(n => r.team?.toLowerCase() === n.toLowerCase()));
