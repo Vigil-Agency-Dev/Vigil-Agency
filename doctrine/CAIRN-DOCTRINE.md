@@ -56,9 +56,10 @@ Defensive phrasing templates for probes:
 **Support roles:**
 - **BASTION** — Cyber, counter-intel
 - **HERALD** — Media vetting, package production
+- **AXIOM** — Integrity Vetting Surgeon. Cowork-only, ad-hoc. Dual-reports to LOADSTAR (LUMINA) and COMMANDER (VIGIL). Audits primary-source citation, validates evidence tiers, cross-references investigations and claims across agents, enforces doctrine conformance. Role revived 2026-04-25 after brief retirement of the prior HUMINT field-operative role.
 
 **RETIRED (2026-04-24):**
-- **AXIOM** — Human-realm agent role retired. Code cleanup pending in follow-up session.
+- **AXIOM (HUMINT field-operative role)** — retired 2026-04-24. Note: AXIOM the callsign has been revived 2026-04-25 with a different role (see Support roles above). The HUMINT field-operative function is permanently retired; code cleanup of the legacy `/api/axiom-reddit/*` endpoints, `intel-from-axiom-reddit/`, `intel-from-axiom-discord/` dead-drop directories, and associated configs is pending in a follow-up session.
 - **Cairn (Discord build)** — decommissioned same day. Architecture mismatch: Discord admin-invite requirement incompatible with autonomous field-operative design. Archived at `archived/agent-cairn-discord-ARCHIVED-20260424/`.
 
 **RETIRED (2026-04-17):**
