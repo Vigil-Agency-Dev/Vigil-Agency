@@ -1,0 +1,20 @@
+{
+  "name": "agent-cairn",
+  "version": "2.0.0",
+  "type": "module",
+  "private": true,
+  "description": "Cairn — VIGIL operational research analyst. Autonomous Telegram userbot (MTProto) on VPS.",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.32.1",
+    "telegram": "^2.26.8",
+    "input": "^1.0.1",
+    "dotenv": "^16.4.5"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

@@ -1,0 +1,31 @@
+[Unit]
+Description=Cairn — VIGIL operational research analyst (Telegram userbot)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=vigil
+Group=vigil
+WorkingDirectory=/home/vigil/services/agent-cairn
+EnvironmentFile=/home/vigil/services/agent-cairn/.env
+ExecStart=/usr/bin/node /home/vigil/services/agent-cairn/index.js
+Restart=on-failure
+RestartSec=10
+StandardOutput=append:/home/vigil/logs/cairn.log
+StandardError=append:/home/vigil/logs/cairn.log
+KillSignal=SIGTERM
+TimeoutStopSec=30
+
+# Resource hygiene
+MemoryMax=1G
+TasksMax=256
+
+# Security hardening (best-effort; relax if something breaks)
+NoNewPrivileges=true
+ProtectSystem=full
+ProtectHome=false
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

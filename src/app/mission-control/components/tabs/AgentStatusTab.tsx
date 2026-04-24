@@ -64,6 +64,7 @@ const REALM_ICONS: Record<string, string> = {
 // Twice-daily cadence = 12h for agents on the standard cron.
 const EXPECTED_INTERVALS: Record<string, number> = {
   clarion: 12,
+  cairn: 12,
   'mission-control': 12,
   commander: 12,
   meridian: 24,
@@ -142,6 +143,7 @@ export default function AgentStatusTab() {
   function getTeamReport(agentId: string): TeamReport | undefined {
     const idMap: Record<string, string[]> = {
       clarion: ['clarion', 'clarion_intel_analyst', 'ClarionAgent'],
+      cairn: ['cairn', 'Cairn', 'CAIRN', 'cairn_intel_analyst'],
       'mission-control': ['mission-control', 'mcp', 'commander', 'COMMANDER', 'MCP'],
       meridian: ['meridian', 'MERIDIAN'],
       commander: ['commander', 'COMMANDER'],
