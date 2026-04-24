@@ -65,7 +65,7 @@ export default function AgentCommsTab() {
   const [lastUpdated, setLastUpdated] = useState<string | null>(null);
   const [liveOverview, setLiveOverview] = useState<Record<string, unknown> | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
-  const reconnectRef = useRef<ReturnType<typeof setTimeout>>();
+  const reconnectRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   // WebSocket connection to live agent comms
   useEffect(() => {

@@ -140,9 +140,9 @@ export default function CorrelationMapTab() {
           const d = await hyposRes.json();
           for (const h of (d.hypotheses || [])) {
             const id = h.id || `H-${raw.length}`; if (ids.has(id)) continue; ids.add(id);
-            const cr = Array.isArray(h.crossRef) ? h.crossRef : [];
+            const cr: string[] = Array.isArray(h.crossRef) ? h.crossRef : [];
             raw.push({ id, label: h.title || id, type: 'hypothesis', status: h.status, detail: h.classification, raw: h.raw, crossRefs: cr, filename: h.filename });
-            cr.forEach(ref => allEdges.push({ source: id, target: ref, label: 'cross-ref' }));
+            cr.forEach((ref: string) => allEdges.push({ source: id, target: ref, label: 'cross-ref' }));
           }
         }
         if (patternsRes.ok) {

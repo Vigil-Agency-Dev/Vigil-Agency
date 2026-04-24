@@ -41,9 +41,29 @@ async function apiFetch<T>(path: string, fallback: T): Promise<T> {
 
 // ===================== LIVE DATA FETCHERS =====================
 
+// Shape returned by /api/mission/overview. Loose — API can add fields.
+export interface MissionOverview {
+  mission?: Record<string, unknown>;
+  stats?: {
+    heartbeats?: number;
+    actionsTotal?: number;
+    commentsTotal?: number;
+    lastHB?: string | null;
+    offlineHrs?: number | null;
+    overdue?: number;
+  };
+  latestIntel?: unknown;
+  latestStrategy?: unknown;
+  agents?: Record<string, unknown>;
+  threats?: unknown[];
+  allies?: unknown[];
+  missionControlStatus?: Record<string, unknown> | null;
+  timestamp?: string;
+}
+
 /** Fetch full mission overview from VPS — primary dashboard data source */
-export async function fetchMissionOverview() {
-  return apiFetch('/api/mission/overview', null);
+export async function fetchMissionOverview(): Promise<MissionOverview | null> {
+  return apiFetch<MissionOverview | null>('/api/mission/overview', null);
 }
 
 /** Fetch all agent statuses */

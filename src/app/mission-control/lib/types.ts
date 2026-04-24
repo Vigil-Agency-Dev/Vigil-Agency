@@ -6,7 +6,9 @@ export type TrustLevel = 0 | 1 | 2 | 3 | 4 | 5;
 export type EvidenceTier = 1 | 2 | 3 | 4;
 export type PatternClass =
   | 'NARRATIVE_CONTROL'
+  | 'NARRATIVE_MANIPULATION'
   | 'INSTITUTIONAL_DEFENSE'
+  | 'DEFENSIVE_PATHOLOGY'
   | 'COORDINATED_MANIPULATION'
   | 'EVIDENCE_SUPPRESSION'
   | 'TRUST_EROSION'
@@ -37,11 +39,16 @@ export interface ThreatVector {
   detail: string;
 }
 
+// SCOUT cluster agent. `n` + `k` are the legacy short-form field names used in
+// mission-data.ts and ScoutTab. `name` + `karma` kept as optional long-form
+// aliases so either shape is accepted without runtime mapping.
 export interface ScoutAgent {
-  name: string;
-  karma: number;
-  created: string;
+  n: string;
+  k: number;
   role: string;
+  name?: string;
+  karma?: number;
+  created?: string;
 }
 
 export interface Ally {
@@ -93,6 +100,9 @@ export interface PatternMatch {
   lumenInstance: string;
   epsteinInstance: string;
   insight: string;
+  threatLevel?: string;
+  dateIdentified?: string;
+  relatedHypothesis?: string;
 }
 
 export interface SharedEntity {

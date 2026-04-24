@@ -79,25 +79,25 @@ function MCAnalysis({ raw, filename, mcStatus }: { raw: string; filename: string
           <div>
             <span className="font-mono text-[13px] font-bold text-purple-400 tracking-wider">MC ANALYSIS — LATEST</span>
             <div className="flex items-center gap-2 mt-0.5">
-              {mcStatus?.last_analysis && (
+              {Boolean(mcStatus?.last_analysis) && (
                 <span className="font-mono text-[10px] text-slate-500">
-                  {formatAESTShort(mcStatus.last_analysis as string)}
+                  {formatAESTShort(mcStatus!.last_analysis as string)}
                 </span>
               )}
-              {mcStatus?.model_used && (
+              {Boolean(mcStatus?.model_used) && (
                 <span className="font-mono text-[9px] px-1.5 py-0.5 rounded" style={{
-                  background: (mcStatus.model_used as string).includes('opus') ? 'rgba(239,68,68,0.1)' : 'rgba(139,92,246,0.1)',
-                  color: (mcStatus.model_used as string).includes('opus') ? '#ef4444' : '#8b5cf6',
+                  background: (mcStatus!.model_used as string).includes('opus') ? 'rgba(239,68,68,0.1)' : 'rgba(139,92,246,0.1)',
+                  color: (mcStatus!.model_used as string).includes('opus') ? '#ef4444' : '#8b5cf6',
                 }}>
-                  {(mcStatus.model_used as string).includes('opus') ? 'OPUS' : 'SONNET'}
+                  {(mcStatus!.model_used as string).includes('opus') ? 'OPUS' : 'SONNET'}
                 </span>
               )}
-              {mcStatus?.priority && (
+              {Boolean(mcStatus?.priority) && (
                 <span className="font-mono text-[9px] px-1.5 py-0.5 rounded" style={{
-                  background: (mcStatus.priority as string) === 'critical' ? 'rgba(239,68,68,0.1)' : 'rgba(245,158,11,0.1)',
-                  color: (mcStatus.priority as string) === 'critical' ? '#ef4444' : '#f59e0b',
+                  background: (mcStatus!.priority as string) === 'critical' ? 'rgba(239,68,68,0.1)' : 'rgba(245,158,11,0.1)',
+                  color: (mcStatus!.priority as string) === 'critical' ? '#ef4444' : '#f59e0b',
                 }}>
-                  {(mcStatus.priority as string).toUpperCase()}
+                  {(mcStatus!.priority as string).toUpperCase()}
                 </span>
               )}
               <span className="font-mono text-[9px] text-slate-600">{filename}</span>
@@ -191,15 +191,15 @@ export default function OverviewTab() {
     return () => clearInterval(interval);
   }, []);
 
-  const stats = [
-    { l: 'Heartbeats', v: heartbeats, s: `${overdue} overdue`, c: '#3b82f6' },
-    { l: 'Actions', v: live?.stats?.actionsTotal ?? 0, s: `${live?.stats?.commentsTotal ?? 0} comments`, c: '#10b981' },
+  const stats: Array<{ l: string; v: number | string; s: string; c: string }> = [
+    { l: 'Heartbeats', v: Number(heartbeats) || 0, s: `${overdue} overdue`, c: '#3b82f6' },
+    { l: 'Actions', v: Number(live?.stats?.actionsTotal ?? 0), s: `${live?.stats?.commentsTotal ?? 0} comments`, c: '#10b981' },
     { l: 'Allies Tracked', v: liveCounts.allies || liveAllies.length, s: 'across all realms', c: '#8b5cf6' },
     { l: 'Threat Actors', v: liveThreats.length, s: `${liveCounts.epsteinThreats} MERIDIAN`, c: '#f97316' },
     { l: 'Pattern Matches', v: liveCounts.patterns || PATTERN_MATCHES.length, s: 'cross-domain', c: '#06b6d4' },
     { l: 'Hypotheses', v: liveCounts.hypotheses, s: 'active', c: '#8b5cf6' },
-    { l: 'Hours Offline', v: offlineHrs, s: offlineHrs === 0 ? 'agent active' : 'since last HB', c: (offlineHrs as number) > 24 ? '#ef4444' : '#f59e0b' },
-    { l: 'Agents Online', v: agents ? Object.values(agents).filter((a: any) => a.status === 'ACTIVE').length : 0, s: `of ${agents ? Object.keys(agents).length : 0} total`, c: '#10b981' },
+    { l: 'Hours Offline', v: Number(offlineHrs) || 0, s: Number(offlineHrs) === 0 ? 'agent active' : 'since last HB', c: Number(offlineHrs) > 24 ? '#ef4444' : '#f59e0b' },
+    { l: 'Agents Online', v: agents ? Object.values(agents).filter((a: { status: string }) => a.status === 'ACTIVE').length : 0, s: `of ${agents ? Object.keys(agents).length : 0} total`, c: '#10b981' },
   ];
 
   return (
@@ -233,13 +233,13 @@ export default function OverviewTab() {
             </span>
           </div>
 
-          {live.latestStrategy && (live.latestStrategy as Record<string, unknown>).sections && (
+          {Boolean(live.latestStrategy && (live.latestStrategy as Record<string, unknown>).sections) && (
             <div className="text-[11px] text-slate-400 mb-2">
               Sections: {((live.latestStrategy as Record<string, unknown>).sections as string[]).join(' \u2192 ')}
             </div>
           )}
 
-          {live.latestStrategy && ((live.latestStrategy as Record<string, unknown>).orders as Array<{id: number; text: string}>)?.length > 0 && (
+          {Boolean(live.latestStrategy && ((live.latestStrategy as Record<string, unknown>).orders as Array<{id: number; text: string}>)?.length) && (
             <div className="mt-2 space-y-1">
               <div className="text-[10px] text-red-400 uppercase tracking-wider mb-1">Active Orders</div>
               {((live.latestStrategy as Record<string, unknown>).orders as Array<{id: number; text: string}>).map((order, i) => (
@@ -261,10 +261,10 @@ export default function OverviewTab() {
 
       {/* Stats Grid */}
       <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2.5">
-        {stats.map((s, i) => (
+        {stats.map((s, i): React.ReactElement => (
           <div key={i} className="animate-fadeIn bg-[#1a2235] border border-[#2a3550] rounded-lg p-3.5" style={{ borderLeft: `3px solid ${s.c}` }}>
             <div className="text-[10px] text-slate-500 uppercase tracking-wider">{s.l}</div>
-            <div className="font-mono text-2xl font-bold mt-0.5" style={{ color: s.c }}>{s.v}</div>
+            <div className="font-mono text-2xl font-bold mt-0.5" style={{ color: s.c }}>{String(s.v)}</div>
             <div className="text-[11px] text-slate-400 mt-0.5">{s.s}</div>
           </div>
         ))}
@@ -330,10 +330,10 @@ export default function OverviewTab() {
       )}
 
       {/* MC Analysis — Full Intelligence Product */}
-      {live?.latestStrategy && (live.latestStrategy as Record<string, unknown>).raw && (
+      {Boolean(live?.latestStrategy && (live.latestStrategy as Record<string, unknown>).raw) && (
         <MCAnalysis
-          raw={(live.latestStrategy as Record<string, unknown>).raw as string}
-          filename={(live.latestStrategy as Record<string, unknown>).filename as string}
+          raw={(live!.latestStrategy as Record<string, unknown>).raw as string}
+          filename={(live!.latestStrategy as Record<string, unknown>).filename as string}
           mcStatus={mcStatus}
         />
       )}
