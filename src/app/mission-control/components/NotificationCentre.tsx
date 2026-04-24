@@ -2,28 +2,31 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { formatAESTShort } from '../lib/date-utils';
+import { fetchPendingReview, type PendingItem, type Urgency } from '../lib/director-review';
 
-const VPS_API = process.env.NEXT_PUBLIC_VPS_ENDPOINT || 'https://ops.jr8ch.com';
-const API_KEY = process.env.NEXT_PUBLIC_VIGIL_API_KEY || '';
-
-interface QueueItem {
-  id: string;
-  filename: string;
-  subreddit: string;
-  type: string;
-  content: string;
-  context?: string;
-  status: string;
-  submittedAt: string;
+interface NotificationCentreProps {
+  onNavigate?: (tabId: string) => void;
 }
 
-export default function NotificationCentre() {
+function urgencyColor(u: Urgency): string {
+  if (u === 'HARD_STOP') return '#ef4444';
+  if (u === 'CRITICAL') return '#f97316';
+  if (u === 'ELEVATED') return '#f59e0b';
+  return '#3b82f6';
+}
+
+function urgencyBg(u: Urgency): string {
+  if (u === 'HARD_STOP') return 'rgba(239,68,68,0.15)';
+  if (u === 'CRITICAL') return 'rgba(249,115,22,0.15)';
+  if (u === 'ELEVATED') return 'rgba(245,158,11,0.15)';
+  return 'rgba(59,130,246,0.15)';
+}
+
+export default function NotificationCentre({ onNavigate }: NotificationCentreProps) {
   const [open, setOpen] = useState(false);
-  const [queue, setQueue] = useState<QueueItem[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [pending, setPending] = useState<PendingItem[]>([]);
   const ref = useRef<HTMLDivElement>(null);
 
-  // Close on click outside
   useEffect(() => {
     function handleClick(e: MouseEvent) {
       if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
@@ -32,102 +35,112 @@ export default function NotificationCentre() {
     return () => document.removeEventListener('mousedown', handleClick);
   }, []);
 
-  // Poll for queue items
   useEffect(() => {
-    async function fetchQueue() {
+    async function load() {
       try {
-        const res = await fetch(`${VPS_API}/api/axiom-reddit/queue`, { headers: { 'x-api-key': API_KEY } });
-        if (!res.ok) return;
-        const data = await res.json();
-        setQueue((data.queue || []).filter((q: QueueItem) => q.status === 'pending'));
-      } catch { /* offline */ }
+        const data = await fetchPendingReview();
+        setPending(data.pending || []);
+      } catch {
+        /* offline — leave prior state */
+      }
     }
-    fetchQueue();
-    const interval = setInterval(fetchQueue, 30000);
+    load();
+    const interval = setInterval(load, 60000);
     return () => clearInterval(interval);
   }, []);
 
-  const handleAction = async (filename: string, action: 'approve' | 'reject') => {
-    setLoading(true);
-    try {
-      await fetch(`${VPS_API}/api/axiom-reddit/approve`, {
-        method: 'POST',
-        headers: { 'x-api-key': API_KEY, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ filename, action }),
-      });
-      setQueue(prev => prev.filter(q => q.filename !== filename));
-    } catch { /* error */ }
-    setLoading(false);
-  };
+  const pendingCount = pending.length;
+  const criticalCount = pending.filter(p => p.urgency === 'HARD_STOP' || p.urgency === 'CRITICAL').length;
 
-  const pendingCount = queue.length;
+  function goReview(_item?: PendingItem) {
+    setOpen(false);
+    if (onNavigate) {
+      // ReviewRegisterTab is registered under tab id 'review-register' in page.tsx
+      onNavigate('review-register');
+    }
+  }
 
   return (
     <div ref={ref} className="relative">
-      {/* Bell Button */}
       <button
         onClick={() => setOpen(!open)}
         className="relative p-2 rounded-lg hover:bg-[#131f30] transition-colors"
+        title={`${pendingCount} item${pendingCount !== 1 ? 's' : ''} pending Review & Approve`}
       >
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-slate-400">
           <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
           <path d="M13.73 21a2 2 0 0 1-3.46 0" />
         </svg>
         {pendingCount > 0 && (
-          <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-red-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center animate-pulse">
+          <span
+            className="absolute -top-0.5 -right-0.5 min-w-4 h-4 px-1 text-white text-[9px] font-bold rounded-full flex items-center justify-center"
+            style={{
+              background: criticalCount > 0 ? '#ef4444' : '#f59e0b',
+              animation: criticalCount > 0 ? 'pulse 1.5s infinite' : undefined,
+            }}
+          >
             {pendingCount}
           </span>
         )}
       </button>
 
-      {/* Dropdown */}
       {open && (
-        <div className="absolute right-0 top-10 w-80 bg-[#0d1520] border border-[#1e2d44] rounded-xl shadow-2xl z-[100] overflow-hidden">
+        <div className="absolute right-0 top-10 w-96 bg-[#0d1520] border border-[#1e2d44] rounded-xl shadow-2xl z-[100] overflow-hidden">
           <div className="px-4 py-2.5 bg-[#111d2e] border-b border-[#1e2d44] flex items-center justify-between">
-            <span className="font-mono text-[12px] font-bold text-slate-200 tracking-wider">NOTIFICATIONS</span>
+            <span className="font-mono text-[12px] font-bold text-slate-200 tracking-wider">REVIEW & APPROVE</span>
             <span className="font-mono text-[10px] text-slate-500">{pendingCount} pending</span>
           </div>
 
-          {queue.length === 0 ? (
-            <div className="p-6 text-center text-[12px] text-slate-600">No pending notifications</div>
+          {pendingCount === 0 ? (
+            <div className="p-6 text-center text-[12px] text-slate-600">Nothing pending DIRECTOR review.</div>
           ) : (
             <div className="max-h-[400px] overflow-y-auto" style={{ scrollbarWidth: 'thin' }}>
-              {queue.map(item => (
-                <div key={item.filename} className="border-b border-[#1a2740] p-3">
-                  <div className="flex items-center gap-2 mb-1.5">
-                    <span className="font-mono text-[10px] px-2 py-0.5 rounded bg-amber-500/15 text-amber-400">APPROVAL</span>
-                    <span className="font-mono text-[10px] text-slate-500">r/{item.subreddit}</span>
-                    <span className="font-mono text-[10px] text-slate-600">{item.type}</span>
+              {pending.slice(0, 10).map(item => (
+                <div
+                  key={item.path}
+                  onClick={() => goReview(item)}
+                  className="border-b border-[#1a2740] p-3 cursor-pointer hover:bg-[#131f30] transition-colors"
+                >
+                  <div className="flex items-center gap-2 mb-1">
+                    <span
+                      className="font-mono text-[10px] px-2 py-0.5 rounded"
+                      style={{ background: urgencyBg(item.urgency), color: urgencyColor(item.urgency) }}
+                    >
+                      {item.urgency}
+                    </span>
+                    <span className="font-mono text-[10px] text-slate-500 truncate flex-1">{item.folder}</span>
+                    {item.filedBy && <span className="font-mono text-[10px] text-slate-600">{item.filedBy}</span>}
                   </div>
-                  <div className="text-[12px] text-slate-300 leading-relaxed mb-2" style={{
-                    display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden',
-                  }}>
-                    {item.content}
-                  </div>
-                  {item.context && (
-                    <div className="text-[10px] text-slate-500 mb-2 italic">{item.context}</div>
+                  <div className="text-[12px] text-slate-200 leading-snug mb-1 line-clamp-2">{item.title}</div>
+                  {item.summary && item.summary !== item.title && (
+                    <div className="text-[11px] text-slate-500 leading-snug line-clamp-2">{item.summary}</div>
                   )}
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => handleAction(item.filename, 'approve')}
-                      disabled={loading}
-                      className="flex-1 py-1.5 rounded-lg bg-green-500/15 text-green-400 text-[11px] font-bold hover:bg-green-500/25 transition-colors disabled:opacity-50"
-                    >
-                      {'\u2713'} APPROVE
-                    </button>
-                    <button
-                      onClick={() => handleAction(item.filename, 'reject')}
-                      disabled={loading}
-                      className="flex-1 py-1.5 rounded-lg bg-red-500/15 text-red-400 text-[11px] font-bold hover:bg-red-500/25 transition-colors disabled:opacity-50"
-                    >
-                      {'\u2717'} REJECT
-                    </button>
-                  </div>
-                  <div className="font-mono text-[9px] text-slate-700 mt-1">
-                    {formatAESTShort(item.submittedAt)}
+                  <div className="flex items-center justify-between mt-1.5">
+                    <span className="font-mono text-[9px] text-slate-700">
+                      {item.filedAt ? formatAESTShort(item.filedAt) : item.modified ? formatAESTShort(item.modified) : ''}
+                    </span>
+                    {item.operation && (
+                      <span className="font-mono text-[9px] text-cyan-500">{item.operation}</span>
+                    )}
                   </div>
                 </div>
               ))}
+              {pendingCount > 10 && (
+                <div className="text-center text-[10px] text-slate-500 py-2 border-t border-[#1a2740]">
+                  +{pendingCount - 10} more — open Review & Approve
+                </div>
+              )}
+            </div>
+          )}
+
+          {pendingCount > 0 && (
+            <div className="px-3 py-2 bg-[#0a0f18] border-t border-[#1a2740]">
+              <button
+                onClick={() => goReview()}
+                className="w-full py-1.5 rounded bg-cyan-500/15 text-cyan-400 text-[11px] font-bold hover:bg-cyan-500/25 transition-colors"
+              >
+                OPEN REVIEW & APPROVE
+              </button>
             </div>
           )}
         </div>

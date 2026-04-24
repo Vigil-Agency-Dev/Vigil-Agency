@@ -10,7 +10,7 @@ const API_KEY = process.env.NEXT_PUBLIC_VIGIL_API_KEY || '';
 const LAST_SEEN_KEY = 'vigil-last-seen';
 
 interface AlertItem {
-  type: 'intel' | 'strategy' | 'threat' | 'team-report' | 'hypothesis' | 'pattern' | 'reddit';
+  type: 'intel' | 'strategy' | 'threat' | 'team-report' | 'hypothesis' | 'pattern';
   title: string;
   time: string;
   detail?: string;
@@ -24,7 +24,6 @@ const TYPE_ICONS: Record<string, string> = {
   'team-report': '\uD83D\uDCCB',
   hypothesis: '\uD83E\uDD14',
   pattern: '\uD83D\uDD17',
-  reddit: '\uD83D\uDCE3',
 };
 
 const TYPE_COLORS: Record<string, string> = {
@@ -34,7 +33,6 @@ const TYPE_COLORS: Record<string, string> = {
   'team-report': '#8b5cf6',
   hypothesis: '#ec4899',
   pattern: '#10b981',
-  reddit: '#f59e0b',
 };
 
 export default function WhatsNew({ onNavigate }: { onNavigate?: (tabId: string) => void }) {
@@ -52,13 +50,12 @@ export default function WhatsNew({ onNavigate }: { onNavigate?: (tabId: string) 
 
     async function load() {
       try {
-        const [intelRes, stratRes, teamRes, hypoRes, patRes, redditRes] = await Promise.all([
+        const [intelRes, stratRes, teamRes, hypoRes, patRes] = await Promise.all([
           fetch(`${VPS_API}/api/mission/intel?limit=20`, { headers: { 'x-api-key': API_KEY } }).catch(() => null),
           fetch(`${VPS_API}/api/mission/strategy?limit=10`, { headers: { 'x-api-key': API_KEY } }).catch(() => null),
           fetch(`${VPS_API}/api/mission/team-reports`, { headers: { 'x-api-key': API_KEY } }).catch(() => null),
           fetch(`${VPS_API}/api/mission/hypotheses`, { headers: { 'x-api-key': API_KEY } }).catch(() => null),
           fetch(`${VPS_API}/api/mission/patterns`, { headers: { 'x-api-key': API_KEY } }).catch(() => null),
-          fetch(`${VPS_API}/api/axiom-reddit/queue`, { headers: { 'x-api-key': API_KEY } }).catch(() => null),
         ]);
 
         const sinceTime = new Date(since).getTime();
@@ -108,14 +105,6 @@ export default function WhatsNew({ onNavigate }: { onNavigate?: (tabId: string) 
             if (pt && new Date(pt).getTime() > sinceTime) {
               items.push({ type: 'pattern', title: `Pattern: ${p.pattern_class || p.id || 'New match'}`, time: pt, tabId: 'exchange' });
             }
-          }
-        }
-
-        if (redditRes?.ok) {
-          const data = await redditRes.json();
-          const pending = (data.queue || []).filter((q: any) => q.status === 'pending');
-          if (pending.length > 0) {
-            items.push({ type: 'reddit', title: `${pending.length} AXIOM Reddit item${pending.length > 1 ? 's' : ''} awaiting approval`, time: new Date().toISOString(), tabId: 'overview' });
           }
         }
 

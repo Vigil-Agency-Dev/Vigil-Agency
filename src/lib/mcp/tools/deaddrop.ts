@@ -10,7 +10,7 @@ export const deadDropTools: MCPTool[] = [
       properties: {
         path: {
           type: 'string',
-          description: 'File path relative to dead-drop root, e.g. "intel-from-director/DIRECTOR-INTEL-001_20260403.md" or "orders-for-axiom/order-001.json"',
+          description: 'File path relative to dead-drop root, e.g. "intel-from-director/DIRECTOR-INTEL-001_20260403.md" or "orders-for-cairn/cairn_20260424_initial_posture.md"',
         },
         content: {
           type: 'string',

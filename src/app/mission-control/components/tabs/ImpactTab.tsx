@@ -28,16 +28,6 @@ function statusColor(s: string) {
 const PLACEHOLDER_ITEMS: DistributedItem[] = [
   {
     id: 'DIST-001',
-    title: 'AXIOM Content Drop #1 — 5 posts deployed to X',
-    tier: 3,
-    channel: 'X (@VigilAgencyOps)',
-    distributedAt: '2026-03-29',
-    status: 'monitoring',
-    impactScore: 0,
-    notes: 'Initial content deployment. Account under X graduated access throttle. Engagement expected to build over 14-day window.',
-  },
-  {
-    id: 'DIST-002',
     title: 'H-001 Weaponised Architecture Thesis — Held for Tier 1 placement',
     tier: 1,
     channel: 'Pending journalist vetting',
@@ -45,16 +35,6 @@ const PLACEHOLDER_ITEMS: DistributedItem[] = [
     status: 'monitoring',
     impactScore: 0,
     notes: 'Tier 1 intel. Requires DIRECTOR + COMMANDER authorization and vetted journalist channel before distribution.',
-  },
-  {
-    id: 'DIST-003',
-    title: 'H-002 Iran InfoWar Hypothesis — Tier 2 content derivatives',
-    tier: 2,
-    channel: 'AXIOM (content brief issued)',
-    distributedAt: '2026-03-29',
-    status: 'monitoring',
-    impactScore: 0,
-    notes: 'Sanitised derivatives of H-002 being woven into AXIOM pattern recognition content.',
   },
 ];
 
@@ -69,10 +49,9 @@ export default function ImpactTab() {
 
     async function load() {
       try {
-        const [teamRes, heraldRes, redditRes] = await Promise.all([
+        const [teamRes, heraldRes] = await Promise.all([
           fetch(`${VPS_API}/api/mission/team-reports`, { headers: { 'x-api-key': API_KEY } }),
           fetch(`${VPS_API}/api/herald/packages`, { headers: { 'x-api-key': API_KEY } }).catch(() => null),
-          fetch(`${VPS_API}/api/axiom-reddit/queue`, { headers: { 'x-api-key': API_KEY } }).catch(() => null),
         ]);
 
         const liveItems: DistributedItem[] = [];
@@ -95,33 +74,16 @@ export default function ImpactTab() {
           }
         }
 
-        if (redditRes?.ok) {
-          const reddit = await redditRes.json();
-          for (const item of (reddit.queue || [])) {
-            idx++;
-            liveItems.push({
-              id: `AXIOM-${item.id || String(idx).padStart(3, '0')}`,
-              title: `AXIOM Reddit: r/${item.subreddit} — ${item.type || 'comment'}`,
-              tier: 3,
-              channel: `Reddit r/${item.subreddit}`,
-              distributedAt: item.submittedAt ? formatAESTShort(item.submittedAt) : '',
-              status: item.status === 'approved' ? 'impact_confirmed' : 'monitoring',
-              impactScore: 0,
-              notes: typeof item.content === 'string' ? item.content.slice(0, 200) : '',
-            });
-          }
-        }
-
         if (teamRes.ok) {
           const teams = await teamRes.json();
           for (const report of (teams.reports || [])) {
-            if (report.team === 'AXIOM' || report.team === 'HERALD') {
+            if (report.team === 'HERALD') {
               idx++;
               const summary = report.status?.summary || report.status?.engagement || '';
               liveItems.push({
                 id: `TEAM-${report.team}-${String(idx).padStart(3, '0')}`,
                 title: `${report.team} Team Report`,
-                tier: report.team === 'HERALD' ? 1 : 2,
+                tier: 1,
                 channel: report.team,
                 distributedAt: report.received ? formatAESTShort(report.received) : '',
                 status: 'monitoring',

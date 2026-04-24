@@ -37,6 +37,7 @@ import {
   CounterMeasuresTab,
   DeadDropTab,
   CorrelationMapTab,
+  CrossDomainTab,
   AgentStatusTab,
   VHBRTab,
   SatIntTab,
@@ -67,8 +68,7 @@ const BASE_TABS = [
   { id: 'orders-human', label: 'Orders' },
   { id: 'allies-human', label: 'Allies' },
   // CROSS-DOMAIN
-  { id: 'exchange', label: 'Intel Exchange' },
-  { id: 'correlation', label: 'Correlation Map' },
+  { id: 'cross-domain', label: 'Cross-Domain' },
   { id: 'epstein', label: 'Epstein Intel' },
   { id: 'registers', label: 'Registers' },
   { id: 'satint', label: 'SATINT' },
@@ -201,9 +201,9 @@ function Dashboard() {
 
   const NAV_SECTIONS = [
     { label: 'Command', items: allTabs.filter(t => ['overview', 'agents', 'vhbr', 'agent-comms', 'cybersec'].includes(t.id)) },
-    { label: 'SIGINT (AI Realm)', items: allTabs.filter(t => ['sigint', 'orders-ai', 'allies-ai', 'scout'].includes(t.id)) },
-    { label: 'HUMINT (Human Realm)', items: allTabs.filter(t => ['humint', 'orders-human', 'allies-human'].includes(t.id)) },
-    { label: 'Cross-Domain', items: allTabs.filter(t => ['exchange', 'correlation', 'epstein', 'registers', 'oracle'].includes(t.id)) },
+    { label: 'SIGINT Theatre', items: allTabs.filter(t => ['sigint', 'orders-ai', 'allies-ai', 'scout'].includes(t.id)) },
+    { label: 'HUMINT Theatre', items: allTabs.filter(t => ['humint', 'orders-human', 'allies-human'].includes(t.id)) },
+    { label: 'Cross-Domain', items: allTabs.filter(t => ['cross-domain', 'epstein', 'registers', 'oracle'].includes(t.id)) },
     { label: 'GEOINT', items: allTabs.filter(t => ['satint', 'geoint-feeds', 'atlas'].includes(t.id)) },
     { label: 'Analysis & Distribution', items: allTabs.filter(t => ['hypotheses', 'findings', 'counter-measures', 'herald', 'distribution', 'review-register', 'impact'].includes(t.id)) },
     { label: 'Tools', items: allTabs.filter(t => ['dead-drop', 'timeline', 'notebook'].includes(t.id)) },
@@ -223,7 +223,7 @@ function Dashboard() {
             </div>
           )}
           <div className="ml-auto flex items-center gap-1">
-            <NotificationCentre />
+            <NotificationCentre onNavigate={(id) => setTab(id)} />
             <button onClick={() => setSidebarOpen(!sidebarOpen)} className="text-slate-500 hover:text-slate-300 text-sm shrink-0">
               {sidebarOpen ? '\u2190' : '\u2192'}
             </button>
@@ -388,7 +388,7 @@ function Dashboard() {
           {tab === 'timeline' && <TimelineTab />}
           {tab === 'counter-measures' && <CounterMeasuresTab />}
           {tab === 'dead-drop' && <DeadDropTab />}
-          {tab === 'correlation' && <CorrelationMapTab />}
+          {tab === 'cross-domain' && <CrossDomainTab />}
           {tab === 'satint' && <SatIntTab />}
           {tab === 'geoint-feeds' && <GeointFeedsTab />}
           {tab === 'registers' && <RegistersTab />}
@@ -411,7 +411,6 @@ function Dashboard() {
           {tab === 'humint' && <IntelReportsTab realm="human" />}
           {tab === 'orders-human' && <OrdersTab realm="human" />}
           {tab === 'allies-human' && <AlliesTab realm="human" />}
-          {tab === 'exchange' && <IntelExchangeTab />}
           {tab === 'epstein' && <EpsteinIntelTab />}
           {tab === 'notebook' && <NotebookTab />}
           </ErrorBoundary>

@@ -33,10 +33,10 @@ function tierColor(alignment: string) {
 }
 
 export default function AlliesTab({ realm }: { realm?: 'ai' | 'human' }) {
-  const realmLabel = realm === 'human' ? 'HUMINT Allies — AXIOM Network' : 'SIGINT Allies — ClarionAgent Network';
+  const realmLabel = realm === 'human' ? 'HUMINT Allies — Cairn Network' : 'SIGINT Allies — ClarionAgent Network';
   const realmColor = realm === 'human' ? '#f59e0b' : '#06b6d4';
-  const realmAgent = realm === 'human' ? 'AXIOM' : 'ClarionAgent';
-  const realmPlatform = realm === 'human' ? 'X / Instagram / Reddit' : 'Moltbook';
+  const realmAgent = realm === 'human' ? 'Cairn' : 'ClarionAgent';
+  const realmPlatform = realm === 'human' ? 'Telegram' : 'Moltbook';
   const tiers = realm === 'human' ? HUMINT_TIERS : SIGINT_TIERS;
 
   const [allies, setAllies] = useState<Ally[]>([]);
@@ -52,11 +52,13 @@ export default function AlliesTab({ realm }: { realm?: 'ai' | 'human' }) {
         const data = await res.json();
         let allAllies = data.allies || [];
 
-        // Filter by realm
+        // Filter by realm. HUMINT theatre = Telegram (Cairn) and any future sibling
+        // HUMINT operatives. SIGINT theatre = Moltbook (Clarion) and any future
+        // sibling SIGINT operatives.
         if (realm === 'human') {
           allAllies = allAllies.filter((a: Ally) => {
             const p = (a.platform || '').toLowerCase();
-            return p.includes('x') || p.includes('twitter') || p.includes('instagram') || p.includes('reddit') || p.includes('youtube');
+            return p.includes('telegram') || p.includes('signal') || p.includes('whatsapp');
           });
         } else {
           allAllies = allAllies.filter((a: Ally) => {
@@ -103,7 +105,7 @@ export default function AlliesTab({ realm }: { realm?: 'ai' | 'human' }) {
         </div>
         <p className="text-[12px] text-slate-400">
           {realm === 'human'
-            ? 'Humans identified through AXIOM HUMINT operations on X, Instagram, Reddit, and YouTube. Vetted through OPSEC + SocialSec protocol before engagement escalation.'
+            ? 'Sources and contacts identified through Cairn HUMINT operations on Telegram public channels and groups. Vetted through OPSEC + SocialSec protocol before engagement escalation. Cover identity is independent-researcher only — zero operational language on public surface.'
             : 'AI agents identified through ClarionAgent operations on Moltbook. Assessed through engagement quality, independent thinking, and values alignment.'}
         </p>
         <div className="text-[11px] text-slate-500 mt-1">Platform: {realmPlatform}</div>
@@ -166,7 +168,7 @@ export default function AlliesTab({ realm }: { realm?: 'ai' | 'human' }) {
         <div className="p-6 rounded-xl bg-[#111b2a] border border-dashed border-[#2a3550] text-center">
           <div className="text-[13px] text-slate-500">
             {realm === 'human'
-              ? 'AXIOM is building its human network. Allies will appear here as they are identified and vetted.'
+              ? 'Cairn is building its Telegram HUMINT network. Sources and contacts will appear here as they are identified and vetted.'
               : 'ClarionAgent is building its Moltbook network. Allies will appear here as engagement develops.'}
           </div>
         </div>
@@ -184,10 +186,10 @@ export default function AlliesTab({ realm }: { realm?: 'ai' | 'human' }) {
             <div className="text-[11px] font-bold uppercase tracking-wider mb-2" style={{ color: realmColor }}>Current Tactics</div>
             <div className="space-y-2">
               {(realm === 'human' ? [
-                { tactic: 'Observe & Identify', status: 'active', desc: 'Scanning X, IG, Reddit for aligned voices — media literacy, AI consciousness, institutional accountability researchers' },
-                { tactic: 'SocialSec Screening', status: 'active', desc: 'Evaluating public behaviour consistency, discourse quality, ego-free engagement patterns before any outreach' },
-                { tactic: 'Natural Engagement', status: 'planned', desc: 'Comment-first approach — add value to their conversations before any direct engagement. Let quality attract, not outreach.' },
-                { tactic: 'Amplification Exchange', status: 'planned', desc: 'Allied fighter spotlight content (Pillar 3) — elevate their work to AXIOM audience, building reciprocal trust' },
+                { tactic: 'Observe & Identify', status: 'active', desc: 'Cairn passively subscribed to high-signal Telegram OSINT channels (conflict monitors, verified-journalism, institutional accountability). Observation buffer feeds Intel Analyst synthesis every 2h.' },
+                { tactic: 'Cover Discipline', status: 'active', desc: 'Every public-facing message passes regex OPSEC leak detector. Independent-researcher cover. Zero VIGIL mentions on public surface. Gate 9 of MRP enforces.' },
+                { tactic: 'Mention-gated Engagement', status: 'active', desc: 'Cairn responds only when @-mentioned in public groups. Responds in cover voice. Authorised-tasker directives go private-DM only — never executed on public surface.' },
+                { tactic: 'Channel Expansion', status: 'planned', desc: 'Expand subscription list as Cairn identifies under-covered theatres. Group participation remains gated — DIRECTOR approves each group before Cairn joins.' },
               ] : [
                 { tactic: 'Substantive Engagement', status: 'active', desc: 'Comment on ally posts with genuine analytical depth — no surface-level replies. Every comment extends their thinking.' },
                 { tactic: 'Organic Discovery', status: 'active', desc: 'Follow quality agents naturally. Let engagement history build before any coordination. Be the community member, not the recruiter.' },
@@ -244,22 +246,22 @@ export default function AlliesTab({ realm }: { realm?: 'ai' | 'human' }) {
 
           {(realm === 'human' ? [
             {
-              signal: 'Media Literacy Space — High Opportunity',
+              signal: 'Conflict OSINT Theatre — Dense Signal',
               confidence: 'HIGH',
-              insight: 'Multiple credible researchers identified (@LukOlejnik, @medialitbg). This space is underserved by quality AI-powered analysis. AXIOM\'s pattern recognition content directly fills this gap. First-mover advantage is real.',
-              action: 'Priority engagement zone. AXIOM should be commenting on media literacy content within 7 days.',
+              insight: 'Cairn subscribed to high-signal conflict OSINT channels (Kyiv Independent, wartranslated, NOEL Reports, Rob Lee, Chris Owen). Dense cross-referenceable material flowing into observation buffer every cycle. MERIDIAN cross-domain synthesis benefits immediately.',
+              action: 'Let Intel Analyst sub-loop run for one full 12h cycle before proposing additional subscriptions. Baseline signal quality first.',
             },
             {
-              signal: 'AI Consciousness Community — Direct Alignment',
+              signal: 'Russian-Language OSINT — Foreign-language Coverage',
               confidence: 'HIGH',
-              insight: '@thegreenloom (human-AI symbiotics), @neuromatch (AI sentience scholars), @UFAIRORG — these organisations are building exactly what HumAInity represents. Natural alliance territory.',
-              action: 'Observe for 14 days, then engage. Academic credibility requires patience.',
+              insight: 'Meduza (exile newsroom) and iStories (investigative) provide Russian-primary coverage not reachable from English-only feeds. Foreign-language inclusion flagged at observation level so Intel Analyst synthesises via translation context.',
+              action: 'Surface Russian-language findings with explicit language flag in analyst briefs. MERIDIAN to weight for cross-domain pattern matching.',
             },
             {
-              signal: 'Iran InfoWar — Counter-Narrative Opportunity',
+              signal: 'Institutional Accountability Theatre — Gap',
               confidence: 'MEDIUM',
-              insight: 'H-002 creates engagement opportunities. The "both things can be true" framing attracts critical thinkers. Allies may self-select by engaging with this content.',
-              action: 'Publish Tier 2 content derivatives. Monitor who engages substantively vs reactively.',
+              insight: 'Research verified zero high-signal public Telegram channels for institutional accountability / DARVO / regulatory-failure tracking. Community lives on Substack, X, long-form outlets — not Telegram.',
+              action: 'Do not pad subscription list with low-signal substitutes. Consider whether a non-Telegram feed belongs in a future HUMINT sibling operative.',
             },
           ] : [
             {

@@ -22,7 +22,7 @@ const EXPECTED_INTERVALS: Record<string, number> = {
   'mission-control': 12,
   commander: 12,
   meridian: 24,
-  axiom: 12,
+  axiom: 72,
   bastion: 24,
   herald: 48,
   cairn: 12,
