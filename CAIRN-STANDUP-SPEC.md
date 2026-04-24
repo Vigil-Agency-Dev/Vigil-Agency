@@ -112,7 +112,7 @@ Before declaring CAIRN live:
 - [ ] Intel Analyst architecture — separate cron task or in-process sub-call?
 - [ ] Which CAIRN skill prompt to use — `.claude/skills/vigil-cairn/SKILL.md` as authoritative source, or rewrite?
 - [ ] VPS-side cleanup — identify and retire the "ghost CAIRN" that's writing `lastActivity` currently
-- [ ] Discord bot invite URL — if the bot hasn't been added to The Watch server yet, need OAuth2 URL with `bot` + `applications.commands` scopes and `Read Messages / Send Messages / Read Message History` perms
+- [ ] Discord bot invite URL — if the bot hasn't been added to The Watch server yet, need OAuth2 URL with full-autonomy perms (see §7)
 
 ---
 
@@ -120,6 +120,64 @@ Before declaring CAIRN live:
 
 Defer until after CAIRN v1 is stable:
 - Voice channel observation
-- File attachment handling
 - Multi-guild support (first version: The Watch only)
 - Field agent spawning (CAIRN is single-agent per DIRECTOR spec)
+
+---
+
+## 7. Discord permission scope — FULL AUTONOMY
+
+Per DIRECTOR 2026-04-24: CAIRN runs with full autonomy on Discord. Not least-privilege — intentional operational scope. CAIRN may: watch all channels, comment, post, send DMs, read DMs, react, manage threads, attach files.
+
+### Required OAuth2 scopes
+
+- `bot`
+- `applications.commands` (for future slash-command use)
+
+### Required bot permissions (decimal: 532441780800)
+
+From Discord's permission integer calculator:
+
+| Permission | Why |
+|---|---|
+| Read Messages / View Channels | Observe all channels |
+| Send Messages | Post + comment |
+| Send Messages in Threads | Participate in threads |
+| Create Public Threads | Initiate conversations |
+| Create Private Threads | Operational privacy |
+| Read Message History | Context beyond live feed |
+| Add Reactions | Lightweight signalling |
+| Attach Files | Share intel artefacts |
+| Embed Links | Rich content |
+| Mention Everyone | Escalation signals (use sparingly) |
+| Use External Emojis | Full expressiveness |
+| Read Message History in DMs | Handle DMs as channel-equivalent |
+| Send DMs | Handle DMs as channel-equivalent |
+| Manage Messages | Delete own posts, pin intel |
+| Manage Threads | Housekeeping |
+| Manage Webhooks | If CAIRN wires downstream integrations |
+
+### Discord Developer Portal — gateway intents
+
+On the CAIRN bot app page, enable all three **privileged intents**:
+
+- [x] **Presence Intent** — see who's online in observed channels
+- [x] **Server Members Intent** — resolve user IDs to names
+- [x] **Message Content Intent** — **critical** — without this, CAIRN sees message metadata but not actual text content. TARN already has this enabled.
+
+If not enabled, `messageCreate` events arrive with empty `.content` and CAIRN is effectively blind.
+
+### OAuth2 invite URL (paste into browser as server admin)
+
+```
+https://discord.com/api/oauth2/authorize?client_id=1489256721867083846&permissions=532441780800&scope=bot%20applications.commands
+```
+
+This URL grants the full-autonomy permission set above. Server admin clicks, picks The Watch server, authorises. Done.
+
+### Security implications
+
+- Token lives in VPS `/home/vigil/.env` only (provisioned 2026-04-24). Never in repo.
+- If token rotates in future: re-run the SSH stdin flow from memory `reference_cairn_token_provisioning.md` (to be written tonight if process gets reused).
+- CAIRN runs as `vigil` user on VPS, same sandbox as ClarionAgent.
+- COMMANDER retains override authority per VIGIL chain of command.
