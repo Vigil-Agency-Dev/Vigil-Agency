@@ -150,7 +150,7 @@ export default function AgentStatusTab() {
       axiom: ['axiom', 'AXIOM'],
       bastion: ['bastion', 'BASTION'],
       herald: ['herald', 'HERALD'],
-      cairn: ['cairn', 'CAIRN', 'axiom-discord', 'axiom-telegram', 'AXIOM-DISCORD', 'AXIOM-TELEGRAM'],
+      cairn: ['cairn', 'CAIRN', 'cairn_intel_analyst', 'CAIRN_INTEL_ANALYST'],
     };
     const names = idMap[agentId] || [agentId];
     return teamReports.find(r => names.some(n => r.team?.toLowerCase() === n.toLowerCase()));

@@ -549,18 +549,20 @@ function writeStatusFile() {
 // ---- Heartbeat writer (twice daily, 06:30 + 18:30 AEDT) ----
 
 function nextHeartbeatDelayMs() {
+  // Synced with ClarionAgent cron: 0 6,18 * * * UTC.
+  // CAIRN fires at the same 06:00 / 18:00 UTC slots so both field operatives' intel
+  // lands in the same window for COMMANDER / Intel Analysts / MERIDIAN cross-sweep.
   const now = new Date();
   const utcNow = now.getTime();
   const utcDate = new Date(utcNow);
   const utcYear = utcDate.getUTCFullYear();
   const utcMonth = utcDate.getUTCMonth();
   const utcDay = utcDate.getUTCDate();
-  // AEDT = UTC+11. 06:30 AEDT = 19:30 UTC prev day. 18:30 AEDT = 07:30 UTC same day.
   const candidates = [
-    Date.UTC(utcYear, utcMonth, utcDay - 1, 19, 30, 0),
-    Date.UTC(utcYear, utcMonth, utcDay, 7, 30, 0),
-    Date.UTC(utcYear, utcMonth, utcDay, 19, 30, 0),
-    Date.UTC(utcYear, utcMonth, utcDay + 1, 7, 30, 0),
+    Date.UTC(utcYear, utcMonth, utcDay, 6, 0, 0),
+    Date.UTC(utcYear, utcMonth, utcDay, 18, 0, 0),
+    Date.UTC(utcYear, utcMonth, utcDay + 1, 6, 0, 0),
+    Date.UTC(utcYear, utcMonth, utcDay + 1, 18, 0, 0),
   ];
   for (const c of candidates) {
     if (c > utcNow) return c - utcNow;
