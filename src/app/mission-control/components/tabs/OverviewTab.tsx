@@ -9,7 +9,7 @@ import { MISSION, STATS, ALLIES, SCOUT, PATTERN_MATCHES, SHARED_ENTITIES, EPSTEI
 const VPS_API = process.env.NEXT_PUBLIC_VPS_ENDPOINT || 'https://ops.jr8ch.com';
 const API_KEY = process.env.NEXT_PUBLIC_VIGIL_API_KEY || '';
 
-// Simple markdown to JSX renderer for MC Analysis
+// Simple markdown to JSX renderer for Live Agency Feed entries
 function renderMarkdown(raw: string) {
   const lines = raw.split('\n');
   const elements: React.ReactNode[] = [];
@@ -77,7 +77,7 @@ function MCAnalysis({ raw, filename, mcStatus }: { raw: string; filename: string
         <div className="flex items-center gap-3">
           <span className="text-lg">{'\u{1F9E0}'}</span>
           <div>
-            <span className="font-mono text-[13px] font-bold text-purple-400 tracking-wider">MC ANALYSIS — LATEST</span>
+            <span className="font-mono text-[13px] font-bold text-purple-400 tracking-wider">LIVE AGENCY FEED</span>
             <div className="flex items-center gap-2 mt-0.5">
               {Boolean(mcStatus?.last_analysis) && (
                 <span className="font-mono text-[10px] text-slate-500">
@@ -329,7 +329,7 @@ export default function OverviewTab() {
         </Card>
       )}
 
-      {/* MC Analysis — Full Intelligence Product */}
+      {/* Live Agency Feed — Full Intelligence Product */}
       {Boolean(live?.latestStrategy && (live.latestStrategy as Record<string, unknown>).raw) && (
         <MCAnalysis
           raw={(live!.latestStrategy as Record<string, unknown>).raw as string}
