@@ -186,9 +186,12 @@ async function handleIncomingMessage(event) {
   if (message.senderId && tgSelfId && message.senderId.toString() === tgSelfId.toString()) return;
   if (message.out) return;
 
-  const chat = await event.getChat();
+  // gramjs 2.26.x: getChat() / getSender() live on `message`, not `event`.
+  // Calling them on the event wrapper raises "event.getSender is not a function"
+  // and silently drops every observation. Bug found and patched live 2026-04-26.
+  const chat = await message.getChat();
   const chatType = classifyChat(chat);
-  const sender = message.senderId ? await event.getSender().catch(() => null) : null;
+  const sender = message.senderId ? await message.getSender().catch(() => null) : null;
   const senderUsername = sender?.username || sender?.firstName || 'unknown';
   const senderId = sender?.id?.toString() || null;
   const text = message.text || message.message || '';
